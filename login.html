@@ -1,0 +1,333 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Connexion • Morgann Music Play</title>
+  <style>
+    :root{
+      --bg:#fff9f2;
+      --surface:#fffefb;
+      --surface2:#fff4df;
+      --txt:#2e2231;
+      --muted:#7d687f;
+      --stroke:rgba(164,98,136,.24);
+      --accent:#ff4fa0;
+    }
+    *{ box-sizing:border-box; margin:0; padding:0; }
+    body{
+      min-height:100vh;
+      font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",Helvetica,Arial,sans-serif;
+      background:var(--bg);
+      color:var(--txt);
+      display:grid;
+      place-items:center;
+      padding:20px;
+    }
+    .auth{
+      width:min(960px,100%);
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      border:1px solid var(--stroke);
+      border-radius:20px;
+      overflow:hidden;
+      background:var(--surface);
+    }
+    .side{
+      padding:28px;
+      background:var(--surface2);
+      border-right:1px solid var(--stroke);
+      display:grid;
+      align-content:center;
+      gap:10px;
+    }
+    .badge{
+      width:max-content;
+      border:1px solid var(--stroke);
+      border-radius:999px;
+      padding:6px 10px;
+      font-size:11px;
+      font-weight:800;
+      background:#fff;
+      text-transform:uppercase;
+      letter-spacing:.3px;
+    }
+    h1{ font-size:36px; line-height:1.03; letter-spacing:-.6px; }
+    p{ color:var(--muted); line-height:1.5; }
+    .forms{ padding:24px; }
+    .tabs{ display:flex; gap:8px; margin-bottom:14px; }
+    .tab{
+      border:1px solid var(--stroke);
+      background:#fff;
+      border-radius:999px;
+      padding:8px 12px;
+      font-size:12px;
+      font-weight:800;
+      cursor:pointer;
+      color:var(--txt);
+    }
+    .tab.active{ background:var(--accent); color:#fff; border-color:transparent; }
+    .panel{ display:none; }
+    .panel.active{ display:grid; gap:10px; }
+    .field{ display:grid; gap:6px; }
+    .field label{ font-size:12px; font-weight:700; color:var(--muted); }
+    input{
+      width:100%;
+      border:1px solid var(--stroke);
+      border-radius:12px;
+      padding:11px 12px;
+      background:#fff;
+      color:var(--txt);
+      font-size:14px;
+    }
+    .btn{
+      border:none;
+      border-radius:12px;
+      padding:12px 14px;
+      background:var(--accent);
+      color:#fff;
+      font-weight:800;
+      font-size:14px;
+      cursor:pointer;
+    }
+    .btn.alt{
+      background:#fff;
+      color:var(--txt);
+      border:1px solid var(--stroke);
+    }
+    .row{ display:flex; gap:8px; }
+    .status{ min-height:20px; font-size:12px; color:var(--muted); }
+    a{ color:#8f2d6f; text-decoration:none; }
+    .links{ margin-top:8px; display:flex; justify-content:space-between; font-size:12px; }
+    @media (max-width:880px){
+      .auth{ grid-template-columns:1fr; }
+      .side{ border-right:none; border-bottom:1px solid var(--stroke); }
+      h1{ font-size:30px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="auth">
+    <section class="side">
+      <div class="badge">Morgann Music Play</div>
+      <h1>Connexion / Inscription</h1>
+      <p>Accédez à la plateforme pour écouter, découvrir les artistes du label et gérer votre espace.</p>
+      <p><a href="/MMCP%20Play/index.html">← Retour à l'accueil</a></p>
+    </section>
+
+    <section class="forms">
+      <div class="tabs">
+        <button id="tabLogin" class="tab active" type="button">Connexion</button>
+        <button id="tabRegister" class="tab" type="button">Inscription</button>
+      </div>
+
+      <form id="loginPanel" class="panel active">
+        <div class="field">
+          <label for="loginEmail">Email</label>
+          <input id="loginEmail" type="email" required />
+        </div>
+        <div class="field">
+          <label for="loginPassword">Mot de passe</label>
+          <input id="loginPassword" type="password" required />
+        </div>
+        <button class="btn" type="submit">Se connecter</button>
+        <div class="row">
+          <button id="googleLogin" class="btn alt" type="button">Continuer avec Google</button>
+        </div>
+        <div class="links">
+          <a id="forgotBtn" href="#">Mot de passe oublié ?</a>
+          <span>Pas de compte ? <a id="goRegister" href="#">Inscription</a></span>
+        </div>
+      </form>
+
+      <form id="registerPanel" class="panel">
+        <div class="field">
+          <label for="registerName">Nom d'artiste / Nom</label>
+          <input id="registerName" type="text" required />
+        </div>
+        <div class="field">
+          <label for="registerEmail">Email</label>
+          <input id="registerEmail" type="email" required />
+        </div>
+        <div class="field">
+          <label for="registerPassword">Mot de passe</label>
+          <input id="registerPassword" type="password" minlength="6" required />
+        </div>
+        <button class="btn" type="submit">Créer mon compte</button>
+        <div class="row">
+          <button id="googleRegister" class="btn alt" type="button">S'inscrire avec Google</button>
+        </div>
+        <div class="links">
+          <span>Déjà inscrit ? <a id="goLogin" href="#">Connexion</a></span>
+        </div>
+      </form>
+
+      <p id="status" class="status"></p>
+    </section>
+  </main>
+
+  <script type="module">
+    import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js";
+    import {
+      getAuth,
+      onAuthStateChanged,
+      signInWithEmailAndPassword,
+      createUserWithEmailAndPassword,
+      updateProfile,
+      sendPasswordResetEmail,
+      GoogleAuthProvider,
+      signInWithPopup
+    } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-auth.js";
+    import {
+      getFirestore,
+      doc,
+      getDoc,
+      setDoc,
+      updateDoc,
+      serverTimestamp
+    } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDSPUArpApBuK0Cn9VbeMtqk4JC-gqruJc",
+      authDomain: "morgann-music-cp.firebaseapp.com",
+      projectId: "morgann-music-cp",
+      storageBucket: "morgann-music-cp.firebasestorage.app",
+      messagingSenderId: "666812685196",
+      appId: "1:666812685196:web:fe3df6749ae768d68494a9"
+    };
+
+    const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    const params = new URLSearchParams(window.location.search);
+    const redirectTarget = params.get("redirect") || "/MMCP%20Play/index.html";
+
+    const tabLogin = document.getElementById("tabLogin");
+    const tabRegister = document.getElementById("tabRegister");
+    const loginPanel = document.getElementById("loginPanel");
+    const registerPanel = document.getElementById("registerPanel");
+    const statusEl = document.getElementById("status");
+
+    const loginEmail = document.getElementById("loginEmail");
+    const loginPassword = document.getElementById("loginPassword");
+    const registerName = document.getElementById("registerName");
+    const registerEmail = document.getElementById("registerEmail");
+    const registerPassword = document.getElementById("registerPassword");
+
+    function setStatus(message, isError = false) {
+      statusEl.textContent = message || "";
+      statusEl.style.color = isError ? "#b00020" : "#7d687f";
+    }
+
+    function setTab(mode) {
+      const loginMode = mode === "login";
+      tabLogin.classList.toggle("active", loginMode);
+      tabRegister.classList.toggle("active", !loginMode);
+      loginPanel.classList.toggle("active", loginMode);
+      registerPanel.classList.toggle("active", !loginMode);
+    }
+
+    async function ensureUserDoc(user) {
+      if (!user?.uid) return;
+      const userRef = doc(db, "users", user.uid);
+      const baseData = {
+        email: user.email || null,
+        displayName: user.displayName || null,
+        updatedAt: serverTimestamp()
+      };
+
+      const snap = await getDoc(userRef);
+      if (snap.exists()) {
+        await updateDoc(userRef, baseData);
+      } else {
+        await setDoc(userRef, {
+          ...baseData,
+          createdAt: serverTimestamp(),
+          role: "user",
+          vip: false
+        });
+      }
+    }
+
+    async function finishAuth(user) {
+      await ensureUserDoc(user);
+      window.location.href = redirectTarget;
+    }
+
+    tabLogin.addEventListener("click", () => setTab("login"));
+    tabRegister.addEventListener("click", () => setTab("register"));
+    document.getElementById("goRegister").addEventListener("click", (e) => {
+      e.preventDefault();
+      setTab("register");
+    });
+    document.getElementById("goLogin").addEventListener("click", (e) => {
+      e.preventDefault();
+      setTab("login");
+    });
+
+    if (params.get("tab") === "register") setTab("register");
+
+    loginPanel.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      setStatus("Connexion en cours...");
+      try {
+        const cred = await signInWithEmailAndPassword(auth, loginEmail.value.trim(), loginPassword.value);
+        await finishAuth(cred.user);
+      } catch (error) {
+        setStatus(`Erreur connexion: ${error?.message || error}`, true);
+      }
+    });
+
+    registerPanel.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      setStatus("Inscription en cours...");
+      try {
+        const cred = await createUserWithEmailAndPassword(auth, registerEmail.value.trim(), registerPassword.value);
+        const displayName = registerName.value.trim();
+        if (displayName) {
+          await updateProfile(cred.user, { displayName });
+        }
+        await finishAuth(cred.user);
+      } catch (error) {
+        setStatus(`Erreur inscription: ${error?.message || error}`, true);
+      }
+    });
+
+    document.getElementById("forgotBtn").addEventListener("click", async (e) => {
+      e.preventDefault();
+      const email = loginEmail.value.trim();
+      if (!email) {
+        setStatus("Entrez votre email dans le formulaire de connexion.", true);
+        return;
+      }
+      try {
+        await sendPasswordResetEmail(auth, email);
+        setStatus("Email de réinitialisation envoyé.");
+      } catch (error) {
+        setStatus(`Erreur reset: ${error?.message || error}`, true);
+      }
+    });
+
+    async function googleSignIn() {
+      setStatus("Connexion Google...");
+      try {
+        const provider = new GoogleAuthProvider();
+        const result = await signInWithPopup(auth, provider);
+        await finishAuth(result.user);
+      } catch (error) {
+        setStatus(`Erreur Google: ${error?.message || error}`, true);
+      }
+    }
+
+    document.getElementById("googleLogin").addEventListener("click", googleSignIn);
+    document.getElementById("googleRegister").addEventListener("click", googleSignIn);
+
+    onAuthStateChanged(auth, (user) => {
+      if (user && params.get("force") !== "1") {
+        window.location.href = redirectTarget;
+      }
+    });
+  </script>
+</body>
+</html>

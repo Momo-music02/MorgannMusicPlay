@@ -1,0 +1,649 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Morgann Music Play</title>
+  <style>
+    :root { --bg:#e2e2e2; --txt:#000; --bg2:#fff; --cover:#bfbfbf; --stroke:rgba(0,0,0,.12); --muted:rgba(0,0,0,.6); }
+    @media (prefers-color-scheme: dark){ :root{ --bg:#414141; --txt:#fff; --bg2:#1e1e1e; --cover:#575757; --stroke:rgba(255,255,255,.14); --muted:rgba(255,255,255,.65);} }
+    *{ box-sizing:border-box; margin:0; padding:0; }
+    body{ font-family:Helvetica,Arial,sans-serif; background:var(--bg); color:var(--txt); }
+    .wrap{ max-width:1250px; margin:0 auto; padding:20px; }
+    .top{ display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:10px; }
+    .title{ font-size:32px; font-weight:900; }
+    .sub{ color:var(--muted); font-size:13px; margin-top:4px; }
+    .links{ display:flex; gap:8px; flex-wrap:wrap; }
+    .btn{ display:inline-flex; align-items:center; justify-content:center; gap:6px; text-decoration:none; border-radius:999px; border:1px solid var(--stroke); color:var(--txt); padding:9px 14px; font-weight:700; background:rgba(0,0,0,.04); cursor:pointer; }
+    .btn.small{ padding:6px 10px; font-size:12px; }
+    .btn[disabled]{ opacity:.5; cursor:not-allowed; }
+    @media (prefers-color-scheme: dark){ .btn{ background:rgba(255,255,255,.06); } }
+    .tabs{ display:flex; gap:8px; flex-wrap:wrap; margin:10px 0 14px; }
+    .tab{ border:1px solid var(--stroke); border-radius:999px; padding:8px 12px; background:transparent; color:var(--txt); cursor:pointer; font-weight:800; }
+    .tab.active{ background:var(--txt); color:var(--bg); }
+    .card{ background:rgba(255,255,255,.62); border:1px solid var(--stroke); border-radius:22px; padding:14px; -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px); }
+    @media (prefers-color-scheme: dark){ .card{ background:rgba(30,30,30,.62); } }
+    .sectionTitle{ font-size:14px; color:var(--muted); font-weight:800; margin-bottom:10px; }
+    .search{ width:min(560px,100%); border:1px solid var(--stroke); border-radius:999px; padding:10px 14px; background:transparent; color:var(--txt); }
+    .grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); gap:12px; }
+    .artistGrid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:10px; }
+    .item{ border:1px solid var(--stroke); border-radius:16px; overflow:hidden; background:rgba(0,0,0,.03); }
+    @media (prefers-color-scheme: dark){ .item{ background:rgba(255,255,255,.05);} }
+    .media{ width:100%; aspect-ratio:1/1; object-fit:cover; display:block; background:var(--cover); }
+    .body{ padding:9px; }
+    .name{ font-size:14px; font-weight:900; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .meta{ font-size:12px; color:var(--muted); margin-top:3px; }
+    .empty{ border:1px dashed var(--stroke); border-radius:14px; padding:12px; color:var(--muted); }
+    .row{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+    .sections{ display:grid; gap:12px; }
+    .panel{ display:none; }
+    .panel.active{ display:block; }
+
+    .player{ position:sticky; bottom:0; margin-top:16px; border:1px solid var(--stroke); border-radius:16px; padding:10px; background:rgba(255,255,255,.75); -webkit-backdrop-filter:blur(12px); backdrop-filter:blur(12px); }
+    @media (prefers-color-scheme: dark){ .player{ background:rgba(30,30,30,.78); } }
+    .controls{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:8px; }
+    .icon{ border:1px solid var(--stroke); border-radius:999px; padding:8px 11px; background:transparent; color:var(--txt); font-weight:800; cursor:pointer; }
+    .timeline{ display:flex; gap:8px; align-items:center; }
+    .timeline input{ width:100%; }
+    .muted{ color:var(--muted); font-size:12px; }
+    .trackList{ margin-top:8px; max-height:220px; overflow:auto; display:grid; gap:7px; }
+    .track{ border:1px solid var(--stroke); border-radius:10px; padding:8px; cursor:pointer; background:rgba(0,0,0,.03); }
+    @media (prefers-color-scheme: dark){ .track{ background:rgba(255,255,255,.04);} }
+    .track.active{ outline:2px solid rgba(59,130,246,.65); }
+    .trackTitle{ font-weight:800; font-size:13px; }
+
+    @media (max-width:760px){ .title{ font-size:26px; } }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <div class="top">
+      <div>
+        <h1 class="title">Morgann Music Play</h1>
+        <p class="sub" id="statsLine">Plateforme d'écoute.</p>
+      </div>
+      <div class="links">
+        <a class="btn" href="/index.html">Accueil MMCP</a>
+        <a class="btn" href="/MMCP%20Play/profile.html">Profil</a>
+      </div>
+    </div>
+
+    <section id="authGate" class="card">
+      <div class="sectionTitle">Connexion obligatoire</div>
+      <p class="muted" style="margin-bottom:10px;">Pour écouter la musique sur Play, il faut un compte Morgann Music CP.</p>
+      <div class="links">
+        <a id="loginLink" class="btn" href="/login.html">Se connecter</a>
+        <a id="registerLink" class="btn" href="/login.html?tab=register">Créer un compte</a>
+      </div>
+    </section>
+
+    <div id="app" class="sections" style="display:none;">
+      <div class="tabs">
+        <button class="tab active" data-panel="home">Accueil</button>
+        <button class="tab" data-panel="new">Nouveautés semaine</button>
+        <button class="tab" data-panel="following">Artistes suivis</button>
+        <button class="tab" data-panel="library">Bibliothèque</button>
+        <button class="tab" data-panel="search">Recherche</button>
+      </div>
+
+      <section id="panel-home" class="panel active card">
+        <div class="sectionTitle">Recommandations</div>
+        <div id="homeGrid" class="grid"></div>
+        <div id="homeEmpty" class="empty" style="display:none; margin-top:8px;">Aucune recommandation disponible.</div>
+      </section>
+
+      <section id="panel-new" class="panel card">
+        <div class="sectionTitle">Nouveautés de la semaine (7 jours)</div>
+        <div id="newGrid" class="grid"></div>
+        <div id="newEmpty" class="empty" style="display:none; margin-top:8px;">Aucune nouveauté cette semaine.</div>
+      </section>
+
+      <section id="panel-following" class="panel card">
+        <div class="sectionTitle">Artistes suivis</div>
+        <div id="followArtists" class="artistGrid"></div>
+        <div id="followArtistsEmpty" class="empty" style="display:none; margin-top:8px;">Tu ne suis encore aucun artiste.</div>
+        <div class="sectionTitle" style="margin-top:12px;">Sorties de tes artistes suivis</div>
+        <div id="followReleases" class="grid"></div>
+        <div id="followReleasesEmpty" class="empty" style="display:none; margin-top:8px;">Aucune sortie trouvée.</div>
+      </section>
+
+      <section id="panel-library" class="panel card">
+        <div class="sectionTitle">Ta bibliothèque</div>
+        <div class="row" style="margin-bottom:10px;">
+          <input id="playlistNameInput" class="search" placeholder="Nom de playlist" style="max-width:280px;" />
+          <button id="createPlaylistBtn" class="btn small" type="button">Créer playlist</button>
+          <span id="libraryMeta" class="muted"></span>
+        </div>
+        <div class="sectionTitle">Sorties enregistrées</div>
+        <div id="savedGrid" class="grid"></div>
+        <div id="savedEmpty" class="empty" style="display:none; margin-top:8px;">Aucune sortie enregistrée.</div>
+        <div class="sectionTitle" style="margin-top:12px;">Playlists</div>
+        <div id="playlistsWrap"></div>
+      </section>
+
+      <section id="panel-search" class="panel card">
+        <div class="sectionTitle">Recherche</div>
+        <input id="searchInput" class="search" placeholder="Recherche artiste, titre, track" />
+        <div id="searchResults" class="grid" style="margin-top:10px;"></div>
+        <div id="searchEmpty" class="empty" style="display:none; margin-top:8px;">Aucun résultat.</div>
+      </section>
+
+      <section class="player">
+        <div class="controls">
+          <button id="prevBtn" class="icon" type="button">⏮</button>
+          <button id="playBtn" class="icon" type="button">▶</button>
+          <button id="nextBtn" class="icon" type="button">⏭</button>
+          <span id="queueInfo" class="muted">0 piste</span>
+        </div>
+        <div class="timeline">
+          <span id="currentTime" class="muted">0:00</span>
+          <input id="progress" type="range" min="0" max="100" value="0" />
+          <span id="duration" class="muted">0:00</span>
+        </div>
+        <div id="nowPlaying" class="muted" style="margin-top:8px;">Aucune lecture</div>
+        <div id="tracksList" class="trackList"></div>
+        <audio id="audio"></audio>
+      </section>
+    </div>
+  </main>
+
+  <script type="module">
+    import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-auth.js";
+    import { getFirestore, collection, getDocs, query, limit } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDSPUArpApBuK0Cn9VbeMtqk4JC-gqruJc",
+      authDomain: "morgann-music-cp.firebaseapp.com",
+      projectId: "morgann-music-cp",
+      storageBucket: "morgann-music-cp.firebasestorage.app",
+      messagingSenderId: "666812685196",
+      appId: "1:666812685196:web:fe3df6749ae768d68494a9"
+    };
+
+    const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    const $ = (id) => document.getElementById(id);
+    const authGate = $("authGate");
+    const appWrap = $("app");
+    const statsLine = $("statsLine");
+
+    const homeGrid = $("homeGrid");
+    const homeEmpty = $("homeEmpty");
+    const newGrid = $("newGrid");
+    const newEmpty = $("newEmpty");
+    const followArtists = $("followArtists");
+    const followArtistsEmpty = $("followArtistsEmpty");
+    const followReleases = $("followReleases");
+    const followReleasesEmpty = $("followReleasesEmpty");
+
+    const playlistNameInput = $("playlistNameInput");
+    const createPlaylistBtn = $("createPlaylistBtn");
+    const libraryMeta = $("libraryMeta");
+    const savedGrid = $("savedGrid");
+    const savedEmpty = $("savedEmpty");
+    const playlistsWrap = $("playlistsWrap");
+
+    const searchInput = $("searchInput");
+    const searchResults = $("searchResults");
+    const searchEmpty = $("searchEmpty");
+
+    const tracksList = $("tracksList");
+    const queueInfo = $("queueInfo");
+    const nowPlaying = $("nowPlaying");
+
+    const audioEl = $("audio");
+    const playBtn = $("playBtn");
+    const prevBtn = $("prevBtn");
+    const nextBtn = $("nextBtn");
+    const progressEl = $("progress");
+    const currentTimeEl = $("currentTime");
+    const durationEl = $("duration");
+
+    let currentUser = null;
+    let releases = [];
+    let queue = [];
+    let currentIndex = -1;
+
+    function clean(v){ return String(v || "").trim(); }
+
+    function parseAnyDateMs(raw){
+      if (!raw) return null;
+      if (typeof raw?.toMillis === "function") return raw.toMillis();
+      if (typeof raw?.toDate === "function") return raw.toDate().getTime();
+      if (raw instanceof Date) return raw.getTime();
+      if (typeof raw === "number" && Number.isFinite(raw)) return raw;
+      const txt = clean(raw);
+      const d = new Date(txt);
+      return Number.isNaN(d.getTime()) ? null : d.getTime();
+    }
+
+    function parseReleaseDateMs(release){
+      return parseAnyDateMs(release?.schedule?.releaseDate || release?.releaseDate || release?.releaseAt || null);
+    }
+
+    function isReleaseValidatedByMMCP(release){
+      const code = Number(clean(release?.statusCode || ""));
+      if (Number.isFinite(code) && code >= 2) return true;
+      const all = [clean(release?.statusUser), clean(release?.statusAdmin), clean(release?.statusPlatform), clean(release?.status)].join(" ").toLowerCase();
+      return all.includes("valid") || all.includes("livr") || all.includes("en ligne") || all.includes("published");
+    }
+
+    function isPlayableRelease(release){
+      const dateMs = parseReleaseDateMs(release);
+      if (!dateMs || dateMs > Date.now()) return false;
+      if (release?.play?.hiddenByArtist === true || release?.play?.hidden === true) return false;
+      return isReleaseValidatedByMMCP(release);
+    }
+
+    function getTrackAudioUrl(track){
+      return clean(track?.files?.audioUrl || track?.audioUrl || track?.fileUrl || track?.url || null);
+    }
+
+    function formatTime(sec){
+      if (!Number.isFinite(sec)) return "0:00";
+      const m = Math.floor(sec / 60);
+      const s = Math.floor(sec % 60);
+      return `${m}:${String(s).padStart(2, "0")}`;
+    }
+
+    function readLS(key, fallback){
+      try {
+        const raw = localStorage.getItem(key);
+        if (!raw) return fallback;
+        return JSON.parse(raw);
+      } catch {
+        return fallback;
+      }
+    }
+
+    function writeLS(key, value){
+      try { localStorage.setItem(key, JSON.stringify(value)); } catch {}
+    }
+
+    function userKey(suffix){
+      return `mmcpPlay_${suffix}_${currentUser?.uid || "guest"}`;
+    }
+
+    function getFollowedArtistIds(){
+      const ids = readLS(userKey("followingArtists"), []);
+      return Array.isArray(ids) ? ids : [];
+    }
+
+    function setFollowedArtistIds(ids){
+      writeLS(userKey("followingArtists"), ids);
+    }
+
+    function getSavedReleaseIds(){
+      const ids = readLS(userKey("savedReleases"), []);
+      return Array.isArray(ids) ? ids : [];
+    }
+
+    function setSavedReleaseIds(ids){
+      writeLS(userKey("savedReleases"), ids);
+    }
+
+    function getPlaylists(){
+      const obj = readLS(userKey("playlists"), {});
+      return (obj && typeof obj === "object") ? obj : {};
+    }
+
+    function setPlaylists(obj){
+      writeLS(userKey("playlists"), obj);
+    }
+
+    function buildTrackQueue(sourceReleases){
+      const out = [];
+      sourceReleases.forEach((release) => {
+        (Array.isArray(release.tracks) ? release.tracks : []).forEach((track, idx) => {
+          const audioUrl = getTrackAudioUrl(track);
+          if (!audioUrl) return;
+          out.push({
+            id: `${release.id}_${idx + 1}`,
+            releaseId: release.id,
+            title: clean(track?.title) || `Piste ${idx + 1}`,
+            artistName: clean(release?.artistName || release?.artist || "Artiste"),
+            releaseTitle: clean(release?.title || "Sortie"),
+            audioUrl
+          });
+        });
+      });
+      return out;
+    }
+
+    function chooseCover(release){
+      return clean(release?.assets?.coverUrl || release?.play?.coverUrl || "");
+    }
+
+    function releaseArtistId(release){
+      return clean(release?.artistId || release?.mainArtistId || release?.artistName || "unknown");
+    }
+
+    function releaseArtistName(release){
+      return clean(release?.artistName || release?.artist || "Artiste");
+    }
+
+    function cardHtml(release, opts={}){
+      const artistId = releaseArtistId(release);
+      const artistName = releaseArtistName(release);
+      const href = `/MMCP%20Play/artiste.html?artistId=${encodeURIComponent(artistId)}&name=${encodeURIComponent(artistName)}`;
+      const followed = getFollowedArtistIds().includes(artistId);
+      const saved = getSavedReleaseIds().includes(release.id);
+      const tracks = Array.isArray(release?.tracks) ? release.tracks.length : 0;
+
+      return `
+        <article class="item" data-release="${release.id}">
+          <a href="${href}"><img class="media" src="${chooseCover(release)}" alt="cover" loading="lazy" decoding="async" /></a>
+          <div class="body">
+            <div class="name">${clean(release?.title) || "Sortie"}</div>
+            <div class="meta">${artistName} • ${tracks} piste${tracks > 1 ? "s" : ""}</div>
+            <div class="row" style="margin-top:7px;">
+              <button class="btn small" data-act="play" data-release="${release.id}">Lecture</button>
+              <button class="btn small" data-act="save" data-release="${release.id}">${saved ? "Retirer" : "Enregistrer"}</button>
+              <button class="btn small" data-act="follow" data-artist="${artistId}">${followed ? "Suivi" : "Suivre"}</button>
+            </div>
+            ${opts.showDate ? `<div class="meta" style="margin-top:6px;">Sortie: ${new Date(parseReleaseDateMs(release)).toLocaleDateString("fr-FR")}</div>` : ""}
+          </div>
+        </article>
+      `;
+    }
+
+    function bindCardActions(root){
+      root.querySelectorAll("[data-act='play']").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const rid = btn.getAttribute("data-release");
+          const relTracks = queue.filter((t) => t.releaseId === rid);
+          if (!relTracks.length) return;
+          const firstId = relTracks[0].id;
+          const idx = queue.findIndex((t) => t.id === firstId);
+          playAt(idx);
+        });
+      });
+
+      root.querySelectorAll("[data-act='save']").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const rid = btn.getAttribute("data-release");
+          const ids = getSavedReleaseIds();
+          const has = ids.includes(rid);
+          const next = has ? ids.filter((id) => id !== rid) : [...ids, rid];
+          setSavedReleaseIds(next);
+          renderLibrary();
+          renderHome();
+          renderNew();
+          renderFollowing();
+          runSearch();
+        });
+      });
+
+      root.querySelectorAll("[data-act='follow']").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const aid = btn.getAttribute("data-artist");
+          const ids = getFollowedArtistIds();
+          const has = ids.includes(aid);
+          const next = has ? ids.filter((id) => id !== aid) : [...ids, aid];
+          setFollowedArtistIds(next);
+          renderFollowing();
+          renderHome();
+          renderNew();
+          runSearch();
+        });
+      });
+    }
+
+    function renderHome(){
+      const sorted = [...releases].sort((a, b) => (parseReleaseDateMs(b) || 0) - (parseReleaseDateMs(a) || 0));
+      const picks = sorted.slice(0, 12);
+      homeGrid.innerHTML = picks.map((r) => cardHtml(r)).join("");
+      homeEmpty.style.display = picks.length ? "none" : "block";
+      bindCardActions(homeGrid);
+    }
+
+    function renderNew(){
+      const weekAgo = Date.now() - (7 * 24 * 60 * 60 * 1000);
+      const news = releases.filter((r) => {
+        const ms = parseReleaseDateMs(r);
+        return !!ms && ms >= weekAgo && ms <= Date.now();
+      }).sort((a, b) => (parseReleaseDateMs(b) || 0) - (parseReleaseDateMs(a) || 0));
+
+      newGrid.innerHTML = news.map((r) => cardHtml(r, { showDate: true })).join("");
+      newEmpty.style.display = news.length ? "none" : "block";
+      bindCardActions(newGrid);
+    }
+
+    function renderFollowing(){
+      const followedIds = getFollowedArtistIds();
+      const artistMap = {};
+      releases.forEach((r) => {
+        const aid = releaseArtistId(r);
+        if (!followedIds.includes(aid)) return;
+        if (!artistMap[aid]) artistMap[aid] = { id: aid, name: releaseArtistName(r), cover: chooseCover(r), count: 0 };
+        artistMap[aid].count += 1;
+      });
+      const artists = Object.values(artistMap);
+
+      followArtists.innerHTML = artists.map((a) => `
+        <article class="item">
+          <a href="/MMCP%20Play/artiste.html?artistId=${encodeURIComponent(a.id)}&name=${encodeURIComponent(a.name)}"><img class="media" src="${a.cover || ""}" alt="${a.name}" /></a>
+          <div class="body">
+            <div class="name">${a.name}</div>
+            <div class="meta">${a.count} sortie${a.count > 1 ? "s" : ""}</div>
+          </div>
+        </article>
+      `).join("");
+      followArtistsEmpty.style.display = artists.length ? "none" : "block";
+
+      const followRel = releases.filter((r) => followedIds.includes(releaseArtistId(r)));
+      followReleases.innerHTML = followRel.map((r) => cardHtml(r)).join("");
+      followReleasesEmpty.style.display = followRel.length ? "none" : "block";
+      bindCardActions(followReleases);
+    }
+
+    function renderLibrary(){
+      const savedIds = getSavedReleaseIds();
+      const saved = releases.filter((r) => savedIds.includes(r.id));
+
+      savedGrid.innerHTML = saved.map((r) => cardHtml(r)).join("");
+      savedEmpty.style.display = saved.length ? "none" : "block";
+      bindCardActions(savedGrid);
+
+      const playlists = getPlaylists();
+      const names = Object.keys(playlists);
+      libraryMeta.textContent = `${saved.length} sortie${saved.length > 1 ? "s" : ""} enregistrée${saved.length > 1 ? "s" : ""} • ${names.length} playlist${names.length > 1 ? "s" : ""}`;
+
+      if (!names.length) {
+        playlistsWrap.innerHTML = `<div class="empty">Aucune playlist pour le moment.</div>`;
+      } else {
+        playlistsWrap.innerHTML = names.map((name) => {
+          const ids = Array.isArray(playlists[name]) ? playlists[name] : [];
+          return `
+            <div class="item" style="padding:10px; margin-bottom:8px;">
+              <div class="name">${name}</div>
+              <div class="meta">${ids.length} piste${ids.length > 1 ? "s" : ""}</div>
+              <div class="row" style="margin-top:8px;">
+                <button class="btn small" data-pl-play="${name}">Lire</button>
+                <button class="btn small" data-pl-del="${name}">Supprimer</button>
+              </div>
+            </div>
+          `;
+        }).join("");
+
+        playlistsWrap.querySelectorAll("[data-pl-play]").forEach((b) => {
+          b.addEventListener("click", () => {
+            const name = b.getAttribute("data-pl-play");
+            const ids = getPlaylists()[name] || [];
+            const first = queue.findIndex((t) => ids.includes(t.id));
+            if (first >= 0) playAt(first);
+          });
+        });
+        playlistsWrap.querySelectorAll("[data-pl-del]").forEach((b) => {
+          b.addEventListener("click", () => {
+            const name = b.getAttribute("data-pl-del");
+            const playlists = getPlaylists();
+            delete playlists[name];
+            setPlaylists(playlists);
+            renderLibrary();
+          });
+        });
+      }
+    }
+
+    function runSearch(){
+      const q = clean(searchInput.value).toLowerCase();
+      if (!q) {
+        searchResults.innerHTML = "";
+        searchEmpty.style.display = "none";
+        return;
+      }
+      const out = releases.filter((r) => {
+        const releaseTxt = [clean(r.title), releaseArtistName(r)].join(" ").toLowerCase();
+        const tracks = (Array.isArray(r.tracks) ? r.tracks : []).some((t) => clean(t?.title).toLowerCase().includes(q));
+        return releaseTxt.includes(q) || tracks;
+      });
+
+      searchResults.innerHTML = out.map((r) => cardHtml(r)).join("");
+      searchEmpty.style.display = out.length ? "none" : "block";
+      bindCardActions(searchResults);
+    }
+
+    function renderTracks(){
+      tracksList.innerHTML = queue.map((t, i) => `
+        <div class="track ${i === currentIndex ? "active" : ""}" data-track="${i}">
+          <div class="trackTitle">${t.title}</div>
+          <div class="muted">${t.artistName} • ${t.releaseTitle}</div>
+        </div>
+      `).join("");
+
+      queueInfo.textContent = `${queue.length} piste${queue.length > 1 ? "s" : ""}`;
+      tracksList.querySelectorAll("[data-track]").forEach((el) => {
+        el.addEventListener("click", () => playAt(Number(el.getAttribute("data-track"))));
+      });
+      setNowPlaying();
+    }
+
+    function setNowPlaying(){
+      const t = queue[currentIndex];
+      nowPlaying.textContent = t ? `Lecture: ${t.title} — ${t.artistName}` : "Aucune lecture";
+    }
+
+    async function playAt(index){
+      if (index < 0 || index >= queue.length) return;
+      currentIndex = index;
+      audioEl.src = queue[currentIndex].audioUrl;
+      try { await audioEl.play(); } catch {}
+      playBtn.textContent = audioEl.paused ? "▶" : "⏸";
+      renderTracks();
+    }
+
+    function playNext(){ if (queue.length) playAt((currentIndex + 1) % queue.length); }
+    function playPrev(){ if (queue.length) playAt((currentIndex - 1 + queue.length) % queue.length); }
+
+    async function loadReleases(){
+      const all = [];
+      try {
+        const s = await getDocs(query(collection(db, "releases"), limit(1400)));
+        s.forEach((d) => all.push({ id: d.id, ...d.data() }));
+      } catch {}
+      return all.filter(isPlayableRelease);
+    }
+
+    function bindTabs(){
+      document.querySelectorAll(".tab").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const panel = btn.getAttribute("data-panel");
+          document.querySelectorAll(".tab").forEach((t) => t.classList.remove("active"));
+          btn.classList.add("active");
+          document.querySelectorAll(".panel").forEach((p) => p.classList.remove("active"));
+          document.getElementById(`panel-${panel}`)?.classList.add("active");
+        });
+      });
+    }
+
+    function bindLibraryActions(){
+      createPlaylistBtn.addEventListener("click", () => {
+        const name = clean(playlistNameInput.value);
+        if (!name) return;
+        const playlists = getPlaylists();
+        if (!playlists[name]) playlists[name] = [];
+        setPlaylists(playlists);
+        playlistNameInput.value = "";
+        renderLibrary();
+      });
+
+      tracksList.addEventListener("contextmenu", (e) => {
+        const row = e.target.closest("[data-track]");
+        if (!row) return;
+        e.preventDefault();
+        const idx = Number(row.getAttribute("data-track"));
+        const track = queue[idx];
+        if (!track) return;
+
+        const playlist = prompt("Ajouter à quelle playlist ? (nom exact)");
+        if (!playlist) return;
+        const playlists = getPlaylists();
+        if (!playlists[playlist]) playlists[playlist] = [];
+        if (!playlists[playlist].includes(track.id)) playlists[playlist].push(track.id);
+        setPlaylists(playlists);
+        renderLibrary();
+      });
+    }
+
+    searchInput.addEventListener("input", runSearch);
+
+    playBtn.addEventListener("click", async () => {
+      if (!queue.length) return;
+      if (currentIndex < 0) { await playAt(0); return; }
+      if (audioEl.paused) { try { await audioEl.play(); } catch {} }
+      else audioEl.pause();
+      playBtn.textContent = audioEl.paused ? "▶" : "⏸";
+    });
+
+    prevBtn.addEventListener("click", playPrev);
+    nextBtn.addEventListener("click", playNext);
+    audioEl.addEventListener("ended", playNext);
+    audioEl.addEventListener("timeupdate", () => {
+      const cur = audioEl.currentTime || 0;
+      const dur = audioEl.duration || 0;
+      currentTimeEl.textContent = formatTime(cur);
+      durationEl.textContent = formatTime(dur);
+      progressEl.value = dur > 0 ? Math.round((cur / dur) * 100) : 0;
+    });
+    progressEl.addEventListener("input", () => {
+      const dur = audioEl.duration || 0;
+      if (!dur) return;
+      audioEl.currentTime = (Number(progressEl.value) / 100) * dur;
+    });
+
+    onAuthStateChanged(auth, async (user) => {
+      currentUser = user || null;
+      const redirect = encodeURIComponent(window.location.href);
+      $("loginLink").href = `/login.html?redirect=${redirect}`;
+      $("registerLink").href = `/login.html?tab=register&redirect=${redirect}`;
+
+      if (!currentUser) {
+        authGate.style.display = "block";
+        appWrap.style.display = "none";
+        statsLine.textContent = "Connexion requise pour écouter.";
+        return;
+      }
+
+      authGate.style.display = "none";
+      appWrap.style.display = "grid";
+      bindTabs();
+      bindLibraryActions();
+
+      releases = await loadReleases();
+      queue = buildTrackQueue(releases);
+      renderTracks();
+      renderHome();
+      renderNew();
+      renderFollowing();
+      renderLibrary();
+      runSearch();
+
+      statsLine.textContent = `${releases.length} sortie${releases.length > 1 ? "s" : ""} • ${queue.length} piste${queue.length > 1 ? "s" : ""}`;
+    });
+  </script>
+</body>
+</html>

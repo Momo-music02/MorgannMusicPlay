@@ -1,0 +1,451 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Play — Dashboard Artiste</title>
+  <style>
+    :root { --bg:#e2e2e2; --txt:#000; --bg2:#fff; --cover:#bfbfbf; --stroke:rgba(0,0,0,.12); --muted:rgba(0,0,0,.6); }
+    @media (prefers-color-scheme: dark){ :root{ --bg:#414141; --txt:#fff; --bg2:#1e1e1e; --cover:#575757; --stroke:rgba(255,255,255,.14); --muted:rgba(255,255,255,.65);} }
+    *{ box-sizing:border-box; margin:0; padding:0; }
+    body{ font-family:Helvetica,Arial,sans-serif; background:var(--bg); color:var(--txt); }
+    .wrap{ max-width:1200px; margin:0 auto; padding:22px; }
+    .top{ display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:14px; }
+    .title{ font-size:30px; font-weight:900; }
+    .sub{ color:var(--muted); font-size:14px; }
+    .links{ display:flex; gap:8px; flex-wrap:wrap; }
+    .btn{ display:inline-flex; align-items:center; justify-content:center; gap:6px; text-decoration:none; border-radius:999px; border:1px solid var(--stroke); color:var(--txt); padding:9px 14px; font-weight:700; background:rgba(0,0,0,.04); cursor:pointer; }
+    .btn[disabled]{ opacity:.6; cursor:not-allowed; }
+    @media (prefers-color-scheme: dark){ .btn{ background:rgba(255,255,255,.06); } }
+    .card{ background:rgba(255,255,255,.62); border:1px solid var(--stroke); border-radius:20px; padding:14px; -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px); }
+    @media (prefers-color-scheme: dark){ .card{ background:rgba(30,30,30,.62); } }
+    .grid{ display:grid; gap:12px; }
+    .stats{ grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); }
+    .stat{ border:1px solid var(--stroke); border-radius:14px; padding:10px; background:rgba(0,0,0,.03); }
+    @media (prefers-color-scheme: dark){ .stat{ background:rgba(255,255,255,.04);} }
+    .k{ font-size:12px; color:var(--muted); }
+    .v{ font-size:22px; font-weight:900; margin-top:3px; }
+    .sectionTitle{ font-size:14px; color:var(--muted); font-weight:800; margin-bottom:10px; }
+    .profile{ display:grid; grid-template-columns:110px 1fr; gap:12px; align-items:start; }
+    .avatar{ width:100px; height:100px; border-radius:50%; object-fit:cover; border:1px solid var(--stroke); background:var(--cover); }
+    .formGrid{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
+    .input{ width:100%; border:1px solid var(--stroke); border-radius:10px; padding:10px; background:transparent; color:var(--txt); }
+    .full{ grid-column:1 / -1; }
+    .muted{ color:var(--muted); font-size:12px; }
+    .releaseTable{ width:100%; border-collapse:collapse; }
+    .releaseTable th,.releaseTable td{ border-bottom:1px solid var(--stroke); text-align:left; padding:9px 6px; font-size:13px; }
+    .releaseTable th{ color:var(--muted); font-weight:800; font-size:12px; }
+    .tag{ border:1px solid var(--stroke); border-radius:999px; padding:3px 8px; font-size:11px; display:inline-block; }
+    .empty{ border:1px dashed var(--stroke); border-radius:14px; padding:12px; color:var(--muted); }
+    .hidden{ display:none !important; }
+    @media (max-width:850px){
+      .profile{ grid-template-columns:1fr; }
+      .formGrid{ grid-template-columns:1fr; }
+      .title{ font-size:24px; }
+      .releaseTable th:nth-child(3), .releaseTable td:nth-child(3),
+      .releaseTable th:nth-child(4), .releaseTable td:nth-child(4){ display:none; }
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <div class="top">
+      <div>
+        <h1 class="title">Dashboard Artiste Play</h1>
+        <p class="sub" id="subline">Connecte-toi pour gérer ton profil et suivre les performances.</p>
+      </div>
+      <div class="links">
+        <a class="btn" href="/MMCP%20Play/index.html">← Play</a>
+        <a class="btn" href="/MMCP%20Play/upload.html">Uploader</a>
+        <button class="btn hidden" id="logoutBtn" type="button">Déconnexion</button>
+      </div>
+    </div>
+
+    <section id="guestCard" class="card">
+      <div class="sectionTitle">Connexion artiste / distributeur</div>
+      <p class="muted" style="margin-bottom:10px;">Tu peux créer un compte ou te connecter avec ton compte distributeur pour voir tes sorties et tes stats.</p>
+      <div class="links">
+        <a class="btn" id="loginBtn" href="/login.html">Se connecter</a>
+        <a class="btn" id="registerBtn" href="/login.html?tab=register">Créer un compte</a>
+      </div>
+    </section>
+
+    <div id="app" class="grid hidden">
+      <section class="card">
+        <div class="sectionTitle">Profil Play</div>
+        <div class="profile">
+          <div>
+            <img id="avatar" class="avatar" src="/default-avatar.png" alt="Avatar" />
+            <input id="avatarFile" type="file" accept="image/*" class="full" style="margin-top:8px;" />
+          </div>
+          <div class="formGrid">
+            <input id="displayNameInput" class="input" placeholder="Nom affiché compte" />
+            <select id="artistSelect" class="input"></select>
+            <input id="artistNameInput" class="input full" placeholder="Nom artiste sur Play" />
+            <div class="links full">
+              <button id="saveProfileBtn" class="btn" type="button">Enregistrer profil</button>
+              <span id="profileMsg" class="muted"></span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="sectionTitle">Statistiques</div>
+        <div class="grid stats" id="statsGrid"></div>
+      </section>
+
+      <section class="card">
+        <div class="sectionTitle">Tes sorties</div>
+        <div id="releasesWrap"></div>
+      </section>
+    </div>
+  </main>
+
+  <script type="module">
+    import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signOut, updateProfile } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-auth.js";
+    import { getFirestore, collection, getDocs, query, where, limit, doc, getDoc, updateDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js";
+    import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-storage.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDSPUArpApBuK0Cn9VbeMtqk4JC-gqruJc",
+      authDomain: "morgann-music-cp.firebaseapp.com",
+      projectId: "morgann-music-cp",
+      storageBucket: "morgann-music-cp.firebasestorage.app",
+      messagingSenderId: "666812685196",
+      appId: "1:666812685196:web:fe3df6749ae768d68494a9"
+    };
+
+    const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    const storage = getStorage(app);
+
+    const $ = (id) => document.getElementById(id);
+
+    const subline = $("subline");
+    const guestCard = $("guestCard");
+    const appWrap = $("app");
+    const logoutBtn = $("logoutBtn");
+
+    const avatar = $("avatar");
+    const avatarFile = $("avatarFile");
+    const displayNameInput = $("displayNameInput");
+    const artistSelect = $("artistSelect");
+    const artistNameInput = $("artistNameInput");
+    const saveProfileBtn = $("saveProfileBtn");
+    const profileMsg = $("profileMsg");
+
+    const statsGrid = $("statsGrid");
+    const releasesWrap = $("releasesWrap");
+
+    let currentUser = null;
+    let ownedArtists = [];
+    let releases = [];
+
+    function clean(v){ return String(v || "").trim(); }
+
+    function parseDateMs(raw){
+      if (!raw) return null;
+      if (typeof raw?.toMillis === "function") return raw.toMillis();
+      if (typeof raw?.toDate === "function") return raw.toDate().getTime();
+      if (raw instanceof Date) return raw.getTime();
+      if (typeof raw === "number" && Number.isFinite(raw)) return raw;
+      const d = new Date(clean(raw));
+      return Number.isNaN(d.getTime()) ? null : d.getTime();
+    }
+
+    function formatDate(raw){
+      const ms = parseDateMs(raw);
+      if (!ms) return "—";
+      return new Date(ms).toLocaleDateString("fr-FR");
+    }
+
+    function formatInt(n){
+      const value = Number(n || 0);
+      return Number.isFinite(value) ? value.toLocaleString("fr-FR") : "0";
+    }
+
+    function releaseViews(r){
+      const fields = [
+        r?.play?.views,
+        r?.play?.stats?.views,
+        r?.stats?.views,
+        r?.views,
+        r?.streams,
+        r?.playCount
+      ];
+      for (const v of fields) {
+        const num = Number(v);
+        if (Number.isFinite(num) && num >= 0) return num;
+      }
+
+      const tracks = Array.isArray(r?.tracks) ? r.tracks : [];
+      let sum = 0;
+      let hasAny = false;
+      tracks.forEach((t) => {
+        const vals = [t?.views, t?.playCount, t?.stats?.views, t?.play?.views];
+        for (const v of vals) {
+          const num = Number(v);
+          if (Number.isFinite(num) && num >= 0) {
+            sum += num;
+            hasAny = true;
+            return;
+          }
+        }
+      });
+      return hasAny ? sum : 0;
+    }
+
+    function releaseStatus(r){
+      return clean(r?.statusUser || r?.statusAdmin || r?.statusPlatform || r?.status || "En traitement");
+    }
+
+    async function loadOwnedArtists(uid){
+      const out = [];
+      try {
+        const snap = await getDocs(query(collection(db, "artists"), where("ownerUid", "==", uid), limit(600)));
+        snap.forEach((d) => out.push({ id: d.id, ...d.data() }));
+      } catch {}
+      return out;
+    }
+
+    async function loadReleasesForOwner(user, artistIds){
+      const out = [];
+      const jobs = [getDocs(query(collection(db, "releases"), where("ownerUid", "==", user.uid), limit(800)))];
+      if (user.email) jobs.push(getDocs(query(collection(db, "releases"), where("ownerEmail", "==", clean(user.email)), limit(800))));
+
+      const base = await Promise.allSettled(jobs);
+      base.forEach((res) => {
+        if (res.status !== "fulfilled") return;
+        res.value.forEach((d) => out.push({ id: d.id, ...d.data() }));
+      });
+
+      for (let i = 0; i < artistIds.length; i += 10) {
+        const chunk = artistIds.slice(i, i + 10);
+        const [byArtist, byMain] = await Promise.allSettled([
+          getDocs(query(collection(db, "releases"), where("artistId", "in", chunk), limit(800))),
+          getDocs(query(collection(db, "releases"), where("mainArtistId", "in", chunk), limit(800)))
+        ]);
+        if (byArtist.status === "fulfilled") byArtist.value.forEach((d) => out.push({ id: d.id, ...d.data() }));
+        if (byMain.status === "fulfilled") byMain.value.forEach((d) => out.push({ id: d.id, ...d.data() }));
+      }
+
+      const uniq = {};
+      out.forEach((r) => { uniq[r.id] = r; });
+      return Object.values(uniq).sort((a, b) => (parseDateMs(b?.createdAt) || 0) - (parseDateMs(a?.createdAt) || 0));
+    }
+
+    function renderArtistSelect(){
+      artistSelect.innerHTML = "";
+      if (!ownedArtists.length) {
+        const opt = document.createElement("option");
+        opt.value = "";
+        opt.textContent = "Aucun artiste";
+        artistSelect.appendChild(opt);
+        artistNameInput.value = "";
+        return;
+      }
+
+      ownedArtists.forEach((a) => {
+        const opt = document.createElement("option");
+        opt.value = a.id;
+        opt.textContent = clean(a.name || a.displayName || a.id);
+        artistSelect.appendChild(opt);
+      });
+      artistSelect.value = ownedArtists[0].id;
+      artistNameInput.value = clean(ownedArtists[0].name || ownedArtists[0].displayName || "");
+    }
+
+    function renderStats(){
+      const totalReleases = releases.length;
+      const totalTracks = releases.reduce((acc, r) => acc + (Array.isArray(r?.tracks) ? r.tracks.length : 0), 0);
+      const totalViews = releases.reduce((acc, r) => acc + releaseViews(r), 0);
+      const avgViews = totalReleases ? Math.round(totalViews / totalReleases) : 0;
+      const topRelease = releases
+        .map((r) => ({ title: clean(r.title) || "Sortie", views: releaseViews(r) }))
+        .sort((a, b) => b.views - a.views)[0];
+
+      statsGrid.innerHTML = `
+        <div class="stat"><div class="k">Sorties</div><div class="v">${formatInt(totalReleases)}</div></div>
+        <div class="stat"><div class="k">Pistes</div><div class="v">${formatInt(totalTracks)}</div></div>
+        <div class="stat"><div class="k">Vues totales</div><div class="v">${formatInt(totalViews)}</div></div>
+        <div class="stat"><div class="k">Moyenne / sortie</div><div class="v">${formatInt(avgViews)}</div></div>
+        <div class="stat" style="grid-column:1 / -1;"><div class="k">Top sortie</div><div class="v" style="font-size:16px;">${topRelease ? `${topRelease.title} (${formatInt(topRelease.views)} vues)` : "—"}</div></div>
+      `;
+    }
+
+    function renderReleases(){
+      if (!releases.length) {
+        releasesWrap.innerHTML = `<div class="empty">Aucune sortie liée à ce compte pour le moment.</div>`;
+        return;
+      }
+
+      releasesWrap.innerHTML = `
+        <table class="releaseTable">
+          <thead>
+            <tr>
+              <th>Titre</th>
+              <th>Date</th>
+              <th>Statut</th>
+              <th>Vues</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${releases.map((r) => {
+              const artistId = clean(r?.artistId || r?.mainArtistId);
+              const artistName = clean(r?.artistName);
+              const artistUrl = `/MMCP%20Play/artiste.html?artistId=${encodeURIComponent(artistId)}&name=${encodeURIComponent(artistName)}`;
+              const releaseUrl = `/dash/release.html?id=${encodeURIComponent(r.id)}`;
+              return `
+                <tr>
+                  <td>${clean(r.title) || "Sortie"}</td>
+                  <td>${formatDate(r?.schedule?.releaseDate || r?.releaseDate || r?.releaseAt || r?.createdAt)}</td>
+                  <td><span class="tag">${releaseStatus(r)}</span></td>
+                  <td>${formatInt(releaseViews(r))}</td>
+                  <td>
+                    <a class="btn" href="${releaseUrl}" style="padding:6px 10px;">Détail</a>
+                    <a class="btn" href="${artistUrl}" style="padding:6px 10px;">Play artiste</a>
+                  </td>
+                </tr>
+              `;
+            }).join("")}
+          </tbody>
+        </table>
+      `;
+    }
+
+    async function uploadAvatar(uid, file){
+      const ext = clean(file?.name).split(".").pop() || "jpg";
+      const path = `avatars/${uid}/play_profile_${Date.now()}.${ext}`;
+      const storageRef = ref(storage, path);
+      await uploadBytes(storageRef, file);
+      return await getDownloadURL(storageRef);
+    }
+
+    async function ensureUserDoc(user, displayName, photoURL){
+      const refUser = doc(db, "users", user.uid);
+      const snap = await getDoc(refUser);
+
+      if (snap.exists()) {
+        await updateDoc(refUser, {
+          email: clean(user.email),
+          displayName: clean(displayName),
+          photoURL: clean(photoURL || "") || null,
+          updatedAt: serverTimestamp()
+        });
+        return;
+      }
+
+      await setDoc(refUser, {
+        email: clean(user.email),
+        displayName: clean(displayName),
+        photoURL: clean(photoURL || "") || null,
+        role: "user",
+        vip: false,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      });
+    }
+
+    async function saveProfile(){
+      if (!currentUser) return;
+      saveProfileBtn.disabled = true;
+      profileMsg.textContent = "Enregistrement…";
+
+      try {
+        const nextDisplayName = clean(displayNameInput.value) || clean(currentUser.displayName) || "Artiste";
+        const selectedArtistId = clean(artistSelect.value);
+        const nextArtistName = clean(artistNameInput.value);
+
+        let nextPhoto = clean(currentUser.photoURL || "");
+        const file = avatarFile.files?.[0];
+        if (file) {
+          nextPhoto = await uploadAvatar(currentUser.uid, file);
+        }
+
+        await updateProfile(currentUser, {
+          displayName: nextDisplayName,
+          photoURL: nextPhoto || null
+        });
+
+        await ensureUserDoc(currentUser, nextDisplayName, nextPhoto || null);
+
+        if (selectedArtistId) {
+          const patch = {
+            updatedAt: serverTimestamp()
+          };
+          if (nextArtistName) {
+            patch.name = nextArtistName;
+            patch.displayName = nextArtistName;
+          }
+          if (nextPhoto) {
+            patch.playProfileImageUrl = nextPhoto;
+          }
+
+          await updateDoc(doc(db, "artists", selectedArtistId), patch);
+
+          ownedArtists = ownedArtists.map((a) => (
+            a.id === selectedArtistId
+              ? { ...a, name: nextArtistName || a.name, displayName: nextArtistName || a.displayName, playProfileImageUrl: nextPhoto || a.playProfileImageUrl }
+              : a
+          ));
+        }
+
+        avatar.src = nextPhoto || "/default-avatar.png";
+        profileMsg.textContent = "Profil mis à jour.";
+      } catch (e) {
+        profileMsg.textContent = "Erreur: " + (e?.message || String(e));
+      } finally {
+        saveProfileBtn.disabled = false;
+      }
+    }
+
+    artistSelect.addEventListener("change", () => {
+      const selected = ownedArtists.find((a) => a.id === artistSelect.value);
+      artistNameInput.value = clean(selected?.name || selected?.displayName || "");
+    });
+
+    saveProfileBtn.addEventListener("click", saveProfile);
+    logoutBtn.addEventListener("click", async () => {
+      await signOut(auth);
+      window.location.href = "/MMCP%20Play/dashboard.html";
+    });
+
+    onAuthStateChanged(auth, async (user) => {
+      currentUser = user || null;
+
+      if (!user) {
+        guestCard.classList.remove("hidden");
+        appWrap.classList.add("hidden");
+        logoutBtn.classList.add("hidden");
+        subline.textContent = "Connecte-toi ou crée un compte pour voir tes sorties, stats et modifier ton profil.";
+
+        const target = encodeURIComponent(window.location.href);
+        $("loginBtn").href = `/login.html?redirect=${target}`;
+        $("registerBtn").href = `/login.html?tab=register&redirect=${target}`;
+        return;
+      }
+
+      guestCard.classList.add("hidden");
+      appWrap.classList.remove("hidden");
+      logoutBtn.classList.remove("hidden");
+      subline.textContent = "Compte connecté : tableau de bord Play chargé.";
+
+      avatar.src = clean(user.photoURL) || "/default-avatar.png";
+      displayNameInput.value = clean(user.displayName || "");
+
+      ownedArtists = await loadOwnedArtists(user.uid);
+      renderArtistSelect();
+
+      const artistIds = ownedArtists.map((a) => a.id);
+      releases = await loadReleasesForOwner(user, artistIds);
+
+      renderStats();
+      renderReleases();
+    });
+  </script>
+</body>
+</html>

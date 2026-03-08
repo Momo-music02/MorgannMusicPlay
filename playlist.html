@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Play — Playlist</title>
+  <style>
+    :root{ --bg:#f3f3f3; --surface:#ffffff; --surface2:#f8f8f8; --txt:#0d0d0d; --muted:#6c6c6c; --stroke:rgba(0,0,0,.12); --cover:#d3d3d3; }
+    @media (prefers-color-scheme: dark){ :root{ --bg:#171717; --surface:#242424; --surface2:#2c2c2c; --txt:#f5f5f5; --muted:#b6b6b6; --stroke:rgba(255,255,255,.14); --cover:#5f5f5f; } }
+    *{ box-sizing:border-box; margin:0; padding:0; }
+    body{ font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",Helvetica,Arial,sans-serif; background:var(--bg); color:var(--txt); }
+    .wrap{ max-width:1100px; margin:0 auto; padding:18px; display:grid; gap:12px; }
+    .top{ display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; }
+    .title{ font-size:30px; font-weight:900; }
+    .sub{ color:var(--muted); margin-top:4px; }
+    .btn{ border:1px solid var(--stroke); border-radius:999px; padding:8px 12px; background:var(--surface); color:var(--txt); text-decoration:none; font-weight:700; cursor:pointer; }
+    .card{ background:var(--surface); border:1px solid var(--stroke); border-radius:16px; padding:12px; }
+    .hero{ display:grid; grid-template-columns:220px 1fr; gap:12px; }
+    .art{ width:100%; aspect-ratio:1/1; object-fit:cover; border-radius:14px; border:1px solid var(--stroke); background:var(--cover); }
+    .sectionTitle{ font-size:13px; color:var(--muted); font-weight:800; margin-bottom:10px; }
+    .row{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+    .chip{ border:1px solid var(--stroke); border-radius:999px; padding:6px 10px; background:var(--surface2); color:var(--txt); font-size:12px; font-weight:700; cursor:pointer; }
+    .list{ display:grid; gap:7px; }
+    .track{ border:1px solid var(--stroke); border-radius:10px; padding:9px; background:var(--surface2); cursor:pointer; }
+    .track.active{ outline:2px solid rgba(59,130,246,.65); }
+    .name{ font-size:14px; font-weight:900; }
+    .meta{ font-size:12px; color:var(--muted); margin-top:2px; }
+    .empty{ border:1px dashed var(--stroke); border-radius:12px; padding:10px; color:var(--muted); }
+    .timeline{ display:flex; gap:8px; align-items:center; margin-top:8px; }
+    .timeline input{ width:100%; }
+    .time{ font-size:12px; color:var(--muted); min-width:34px; text-align:center; }
+    @media (max-width:760px){ .hero{ grid-template-columns:1fr; } .title{ font-size:24px; } }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <div class="top">
+      <div>
+        <h1 class="title" id="title">Playlist</h1>
+        <p class="sub" id="subline">Chargement…</p>
+      </div>
+      <a class="btn" href="/MMCP%20Play/index.html">← Retour Play</a>
+    </div>
+
+    <section class="card hero">
+      <div id="artWrap"></div>
+      <div>
+        <div class="sectionTitle">Lecture playlist</div>
+        <div class="row">
+          <button id="playBtn" class="chip" type="button">▶ Lecture</button>
+          <button id="orderBtn" class="chip" type="button">Mode: Ordre</button>
+          <button id="shuffleBtn" class="chip" type="button">Mode: Aléatoire</button>
+          <span id="modeTag" class="meta">Ordre des titres</span>
+        </div>
+        <div class="timeline">
+          <span id="cur" class="time">0:00</span>
+          <input id="progress" type="range" min="0" max="100" value="0" />
+          <span id="dur" class="time">0:00</span>
+        </div>
+        <div id="now" class="meta" style="margin-top:8px;">Aucune lecture</div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="sectionTitle">Titres (clique pour lire le titre voulu)</div>
+      <div id="tracks" class="list"></div>
+      <div id="empty" class="empty" style="display:none;">Aucun titre dans cette playlist.</div>
+    </section>
+  </main>
+
+  <audio id="audio"></audio>
+
+  <script type="module">
+    import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-auth.js";
+    import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDSPUArpApBuK0Cn9VbeMtqk4JC-gqruJc",
+      authDomain: "morgann-music-cp.firebaseapp.com",
+      projectId: "morgann-music-cp",
+      storageBucket: "morgann-music-cp.firebasestorage.app",
+      messagingSenderId: "666812685196",
+      appId: "1:666812685196:web:fe3df6749ae768d68494a9"
+    };
+
+    const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    const $ = (id) => document.getElementById(id);
+
+    const titleEl = $("title");
+    const subline = $("subline");
+    const artWrap = $("artWrap");
+    const playBtn = $("playBtn");
+    const orderBtn = $("orderBtn");
+    const shuffleBtn = $("shuffleBtn");
+    const modeTag = $("modeTag");
+    const curEl = $("cur");
+    const durEl = $("dur");
+    const progress = $("progress");
+    const now = $("now");
+    const tracksEl = $("tracks");
+    const empty = $("empty");
+    const audio = $("audio");
+
+    const params = new URLSearchParams(window.location.search);
+    const playlistId = (params.get("id") || "").trim();
+
+    let playlist = null;
+    let tracks = [];
+    let currentIndex = -1;
+    let mode = "order";
+
+    function clean(v){ return String(v || "").trim(); }
+
+    function formatTime(sec){
+      if (!Number.isFinite(sec)) return "0:00";
+      const m = Math.floor(sec / 60);
+      const s = Math.floor(sec % 60);
+      return `${m}:${String(s).padStart(2, "0")}`;
+    }
+
+    function renderCover(){
+      const coverUrl = clean(playlist?.coverUrl || tracks?.[0]?.coverUrl || "");
+      const mediaType = clean(playlist?.coverMediaType || "image");
+      if (!coverUrl) {
+        artWrap.innerHTML = `<div class="art"></div>`;
+        return;
+      }
+      artWrap.innerHTML = mediaType === "video"
+        ? `<video class="art" src="${coverUrl}" autoplay muted loop playsinline preload="metadata"></video>`
+        : `<img class="art" src="${coverUrl}" alt="cover" />`;
+    }
+
+    function renderTracks(){
+      if (!tracks.length) {
+        empty.style.display = "block";
+        tracksEl.innerHTML = "";
+        return;
+      }
+      empty.style.display = "none";
+      tracksEl.innerHTML = tracks.map((t, i) => `
+        <article class="track ${i === currentIndex ? "active" : ""}" data-i="${i}">
+          <div class="name">${i + 1}. ${clean(t.title) || "Piste"}</div>
+          <div class="meta">${clean(t.artistName)} • ${clean(t.releaseTitle)}</div>
+        </article>
+      `).join("");
+
+      tracksEl.querySelectorAll("[data-i]").forEach((el) => {
+        el.addEventListener("click", () => playAt(Number(el.getAttribute("data-i"))));
+      });
+    }
+
+    function setNow(){
+      const t = tracks[currentIndex];
+      now.textContent = t ? `Lecture: ${clean(t.title)} — ${clean(t.artistName)}` : "Aucune lecture";
+      playBtn.textContent = audio.paused ? "▶ Lecture" : "⏸ Pause";
+    }
+
+    async function playAt(index){
+      if (index < 0 || index >= tracks.length) return;
+      currentIndex = index;
+      audio.src = clean(tracks[currentIndex].audioUrl);
+      try { await audio.play(); } catch {}
+      renderTracks();
+      setNow();
+    }
+
+    function nextTrack(){
+      if (!tracks.length) return;
+      if (mode === "shuffle") {
+        const next = Math.floor(Math.random() * tracks.length);
+        playAt(next);
+        return;
+      }
+      playAt((currentIndex + 1) % tracks.length);
+    }
+
+    playBtn.addEventListener("click", async () => {
+      if (!tracks.length) return;
+      if (currentIndex < 0) { await playAt(0); return; }
+      if (audio.paused) { try { await audio.play(); } catch {} }
+      else audio.pause();
+      setNow();
+    });
+
+    orderBtn.addEventListener("click", () => {
+      mode = "order";
+      modeTag.textContent = "Ordre des titres";
+    });
+
+    shuffleBtn.addEventListener("click", () => {
+      mode = "shuffle";
+      modeTag.textContent = "Lecture aléatoire";
+    });
+
+    audio.addEventListener("ended", nextTrack);
+    audio.addEventListener("timeupdate", () => {
+      const cur = audio.currentTime || 0;
+      const dur = audio.duration || 0;
+      curEl.textContent = formatTime(cur);
+      durEl.textContent = formatTime(dur);
+      progress.value = dur > 0 ? Math.round((cur / dur) * 100) : 0;
+    });
+
+    progress.addEventListener("input", () => {
+      const dur = audio.duration || 0;
+      if (!dur) return;
+      audio.currentTime = (Number(progress.value) / 100) * dur;
+    });
+
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        window.location.href = `/login.html?redirect=${encodeURIComponent(window.location.href)}`;
+        return;
+      }
+
+      if (!playlistId) {
+        subline.textContent = "Playlist introuvable";
+        return;
+      }
+
+      try {
+        const snap = await getDoc(doc(db, "playPublicPlaylists", playlistId));
+        if (!snap.exists()) {
+          subline.textContent = "Playlist introuvable";
+          return;
+        }
+
+        playlist = { id: snap.id, ...snap.data() };
+        titleEl.textContent = clean(playlist.name) || "Playlist";
+        tracks = Array.isArray(playlist.trackRefs) ? playlist.trackRefs : [];
+        subline.textContent = `${tracks.length} titre${tracks.length > 1 ? "s" : ""}`;
+
+        renderCover();
+        renderTracks();
+        setNow();
+      } catch (e) {
+        subline.textContent = "Erreur de chargement";
+      }
+    });
+  </script>
+</body>
+</html>
