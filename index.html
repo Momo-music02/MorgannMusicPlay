@@ -638,7 +638,7 @@
   <script type="module">
     import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-auth.js";
-    import { getFirestore, collection, getDocs, getCountFromServer, query, where, limit, doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js";
+    import { getFirestore, collection, collectionGroup, getDocs, query, limit, doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyDSPUArpApBuK0Cn9VbeMtqk4JC-gqruJc",
@@ -904,6 +904,49 @@
       return isReleaseValidatedByMMCP(release);
     }
 
+    function isReleaseLike(data){
+      return !!(
+        clean(data?.title) ||
+        clean(data?.artistId) ||
+        clean(data?.artistName) ||
+        Array.isArray(data?.tracks)
+      );
+    }
+
+    async function loadAllReleases(maxLegacy = 1400, maxNested = 3000){
+      const out = [];
+
+      try {
+        const legacySnap = await getDocs(query(collection(db, "releases"), limit(maxLegacy)));
+        legacySnap.forEach((d) => {
+          const data = d.data() || {};
+          if (!isReleaseLike(data)) return;
+          out.push({ id: d.id, ...data });
+        });
+      } catch {}
+
+      try {
+        const nestedSnap = await getDocs(query(collectionGroup(db, "items"), limit(maxNested)));
+        nestedSnap.forEach((d) => {
+          const path = clean(d.ref?.path || "");
+          if (!path.startsWith("releases/")) return;
+
+          const data = d.data() || {};
+          if (!isReleaseLike(data)) return;
+
+          const ownerUid = clean(path.split("/")[1] || data?.ownerUid || "") || null;
+          out.push({ id: d.id, ownerUid, ...data });
+        });
+      } catch {}
+
+      const uniq = {};
+      out.forEach((r) => {
+        const key = `${clean(r.ownerUid) || "root"}::${clean(r.id)}`;
+        uniq[key] = r;
+      });
+      return Object.values(uniq);
+    }
+
     function getTrackAudioUrl(track){
       return clean(track?.files?.audioUrl || track?.audioUrl || track?.fileUrl || track?.url || null);
     }
@@ -1010,15 +1053,14 @@
       landingReleasesLoaded = true;
 
       try {
-        const snap = await getDocs(query(collection(db, "releases"), limit(36)));
+        const allReleases = await loadAllReleases(120, 500);
         const items = [];
 
-        snap.forEach((d) => {
-          const data = d.data() || {};
+        allReleases.forEach((data) => {
           const releaseDateMs = parseReleaseDateMs(data) || 0;
-          const title = clean(data.title) || `Release ${d.id}`;
+          const title = clean(data.title) || `Release`;
           const artist = releaseArtistName(data);
-          items.push({ uid: d.id, title, artist, releaseDateMs });
+          items.push({ uid: clean(data.id), title, artist, releaseDateMs });
         });
 
         items.sort((a, b) => (b.releaseDateMs || 0) - (a.releaseDateMs || 0));
@@ -1104,21 +1146,16 @@
       landingStatsLoaded = true;
 
       try {
-        const artistsRef = collection(db, "artists");
-        const releasesRef = collection(db, "releases");
-
-        const [artistsCountSnap, releasesCountSnap, releasesSnap] = await Promise.all([
-          getCountFromServer(artistsRef),
-          getCountFromServer(releasesRef),
-          getDocs(query(releasesRef, limit(3000)))
+        const [artistsSnap, releasesAll] = await Promise.all([
+          getDocs(query(collection(db, "artists"), limit(1200))),
+          loadAllReleases(1600, 3600)
         ]);
 
-        const artistsCount = Number(artistsCountSnap.data()?.count || 0);
-        const releasesCount = Number(releasesCountSnap.data()?.count || 0);
+        const artistsCount = artistsSnap.size;
+        const releasesCount = releasesAll.length;
 
         let tracksCount = 0;
-        releasesSnap.forEach((d) => {
-          const data = d.data() || {};
+        releasesAll.forEach((data) => {
           const tracks = Array.isArray(data.tracks) ? data.tracks : [];
           tracksCount += tracks.length;
         });
@@ -1459,11 +1496,7 @@
     function playPrev(){ if (queue.length) playAt((currentIndex - 1 + queue.length) % queue.length); }
 
     async function loadReleases(){
-      const out = [];
-      try {
-        const snap = await getDocs(query(collection(db, "releases"), limit(1400)));
-        snap.forEach((d) => out.push({ id: d.id, ...d.data() }));
-      } catch {}
+      const out = await loadAllReleases(1800, 4000);
       return out.filter(isPlayableRelease);
     }
 

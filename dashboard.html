@@ -228,6 +228,7 @@
         jobs.push(getDocs(query(collection(db, "releases"), where("artistId", "==", artistId), limit(900))));
         jobs.push(getDocs(query(collection(db, "releases"), where("mainArtistId", "==", artistId), limit(900))));
       }
+      jobs.push(getDocs(query(collection(db, "releases", user.uid, "items"), limit(1200))));
 
       const res = await Promise.allSettled(jobs);
       res.forEach((r) => {
@@ -235,8 +236,14 @@
         r.value.forEach((d) => out.push({ id: d.id, ...d.data() }));
       });
 
+      const filtered = out.filter((r) => {
+        if (!clean(artistId)) return true;
+        const rid = clean(r?.artistId || r?.mainArtistId || "");
+        return !rid || rid === clean(artistId);
+      });
+
       const uniq = {};
-      out.forEach((r) => { uniq[r.id] = r; });
+      filtered.forEach((r) => { uniq[`${clean(r.ownerUid) || user.uid}::${r.id}`] = r; });
       return Object.values(uniq).sort((a, b) => (parseDateMs(b?.createdAt) || 0) - (parseDateMs(a?.createdAt) || 0));
     }
 

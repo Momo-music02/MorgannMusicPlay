@@ -64,7 +64,7 @@
   <script type="module">
     import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-auth.js";
-    import { getFirestore, collection, getDocs, query, where, limit, doc, getDoc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js";
+    import { getFirestore, collection, collectionGroup, getDocs, query, where, limit, doc, getDoc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js";
     import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-storage.js";
 
     const firebaseConfig = {
@@ -177,7 +177,7 @@
             </div>
             ${canManageArtist ? `
               <div class="line" style="margin-top:8px;">
-                <label class="info"><input type="checkbox" data-hide="${r.id}" ${isHidden ? "checked" : ""} style="margin-right:6px;">Masquer cette sortie sur Play</label>
+                <label class="info"><input type="checkbox" data-hide="${r.id}" data-hide-path="${clean(r.__path || `releases/${r.id}`)}" ${isHidden ? "checked" : ""} style="margin-right:6px;">Masquer cette sortie sur Play</label>
               </div>
             ` : ``}
           </div>
@@ -186,8 +186,9 @@
         card.querySelector("[data-hide]")?.addEventListener("change", async (e) => {
           const checked = !!e.target.checked;
           const rid = e.target.getAttribute("data-hide");
+          const releasePath = clean(e.target.getAttribute("data-hide-path") || `releases/${rid}`);
           try {
-            await updateDoc(doc(db, "releases", rid), {
+            await updateDoc(doc(db, releasePath), {
               "play.hiddenByArtist": checked,
               "play.hiddenByArtistUid": currentUser?.uid || null,
               "play.hiddenByArtistAt": serverTimestamp(),
@@ -221,12 +222,26 @@
       if (artistName){
         try {
           const byName = await getDocs(query(collection(db, "releases"), where("artistName", "==", artistName), limit(400)));
-          byName.forEach(d => out.push({ id: d.id, ...d.data() }));
+          byName.forEach(d => out.push({ id: d.id, ...d.data(), __path: d.ref?.path || `releases/${d.id}` }));
         } catch {}
       }
 
+      try {
+        const nested = await getDocs(query(collectionGroup(db, "items"), limit(3500)));
+        nested.forEach((d) => {
+          const path = clean(d.ref?.path || "");
+          if (!path.startsWith("releases/")) return;
+          const data = d.data() || {};
+          const aid = clean(data?.artistId || data?.mainArtistId || "");
+          const aname = clean(data?.artistName || "");
+          if (artistId && aid !== artistId) return;
+          if (!artistId && artistName && aname !== artistName) return;
+          out.push({ id: d.id, ...data, __path: path });
+        });
+      } catch {}
+
       const byId = {};
-      out.forEach(r => { byId[r.id] = r; });
+      out.forEach(r => { byId[`${clean(r.ownerUid) || "root"}::${r.id}`] = r; });
       return Object.values(byId).filter(isPlayableRelease);
     }
 

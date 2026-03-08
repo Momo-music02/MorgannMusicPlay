@@ -119,7 +119,7 @@
   <script type="module">
     import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-auth.js";
-    import { getFirestore, collection, getDocs, query, limit, doc, getDoc, deleteDoc, addDoc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js";
+    import { getFirestore, collection, collectionGroup, getDocs, query, limit, doc, getDoc, deleteDoc, addDoc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js";
     import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-storage.js";
 
     const firebaseConfig = {
@@ -220,9 +220,32 @@
       const out = [];
       try {
         const snap = await getDocs(query(collection(db, "releases"), limit(1500)));
-        snap.forEach((d) => out.push({ id: d.id, ...d.data() }));
+        snap.forEach((d) => {
+          const data = d.data() || {};
+          if (clean(data?.title) || Array.isArray(data?.tracks)) {
+            out.push({ id: d.id, ...data, __path: d.ref?.path || `releases/${d.id}` });
+          }
+        });
       } catch {}
-      return out;
+
+      try {
+        const nested = await getDocs(query(collectionGroup(db, "items"), limit(3000)));
+        nested.forEach((d) => {
+          const path = clean(d.ref?.path || "");
+          if (!path.startsWith("releases/")) return;
+          const data = d.data() || {};
+          if (!(clean(data?.title) || Array.isArray(data?.tracks))) return;
+          const ownerUid = clean(path.split("/")[1] || data?.ownerUid || "") || null;
+          out.push({ id: d.id, ownerUid, ...data, __path: path });
+        });
+      } catch {}
+
+      const uniq = {};
+      out.forEach((r) => {
+        const key = `${clean(r.ownerUid) || "root"}::${clean(r.id)}`;
+        uniq[key] = r;
+      });
+      return Object.values(uniq);
     }
 
     async function loadPublicPlaylists(){
