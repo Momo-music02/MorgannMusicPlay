@@ -14,8 +14,8 @@
       color:var(--txt);
     }
 
-    .app{ min-height:100%; display:grid; grid-template-columns:265px 1fr; }
-    .sidebar{ border-right:1px solid var(--stroke); background:var(--surface2); padding:14px 12px; display:flex; flex-direction:column; gap:12px; }
+    .app{ min-height:100vh; display:grid; grid-template-columns:265px 1fr; }
+    .sidebar{ border-right:1px solid var(--stroke); background:var(--surface2); padding:14px 12px; display:flex; flex-direction:column; gap:12px; position:sticky; top:0; height:100vh; overflow:auto; }
     .brand{ font-size:22px; font-weight:900; letter-spacing:-.3px; padding:4px 8px; }
     .nav{ display:grid; gap:6px; }
     .navBtn{ text-align:left; border:1px solid transparent; border-radius:12px; padding:10px 12px; background:transparent; color:var(--txt); font-weight:700; cursor:pointer; }
@@ -148,7 +148,7 @@
       justify-content:space-between;
       gap:10px;
       border:1px solid rgba(255,79,160,.28);
-      background:rgba(255,250,242,.84);
+      background:rgba(255, 250, 242, 0.252);
       -webkit-backdrop-filter:blur(12px);
       backdrop-filter:blur(12px);
       border-radius:999px;
@@ -268,8 +268,9 @@
     .bannerWrap{ display:grid; gap:16px; }
     .heroBannerImg{
       width:100%;
-      height:min(44vw, 360px);
-      object-fit:cover;
+      height:auto;
+      object-fit:contain;
+      display:block;
       border-radius:18px;
       border:1px solid var(--stroke);
       background:#f3e8d2;
@@ -300,7 +301,7 @@
 
     @media (max-width:980px){
       .app{ grid-template-columns:1fr; }
-      .sidebar{ border-right:none; border-bottom:1px solid var(--stroke); }
+      .sidebar{ border-right:none; border-bottom:1px solid var(--stroke); position:static; height:auto; overflow:visible; }
       .sideBottom{ margin-top:0; }
       .playerWrap{ grid-template-columns:1fr; }
       .homeHero{ grid-template-columns:1fr; }
@@ -329,7 +330,7 @@
     <main class="landing">
       <section class="landingSection reveal" id="top">
         <div class="bannerWrap">
-          <img class="heroBannerImg" src="https://images.unsplash.com/photo-1501386761578-eac5c94b800a?auto=format&fit=crop&w=1800&q=80" alt="Bannière artistes Morgann Music CP" />
+          <img class="heroBannerImg" src="bp.png" alt="Bannière artistes Morgann Music CP" />
           <div class="landingBadge">Plateforme officielle du label</div>
           <h1 class="landingTitle">La musique des <em>artistes de Morgann Music CP</em>, au même endroit.</h1>
           <p class="landingText">Morgann Music Play est la plateforme de streaming et de découverte du distributeur Morgann Music CP. Elle permet d’écouter les morceaux du catalogue, suivre les artistes du label et découvrir les dernières sorties en continu.</p>
@@ -339,8 +340,8 @@
             <article class="miniCard"><h4>Musiques exclusives</h4><p>Retrouvez des sélections et contenus mis en avant par MMCP.</p></article>
           </div>
           <div class="landingCtas">
-            <a id="loginLink" class="ctaPrimary" href="/MMCP%20Play/login.html">Se connecter</a>
-            <a id="registerLink" class="ctaGhost" href="/MMCP%20Play/login.html?tab=register">Créer un compte</a>
+            <a id="loginLink" class="ctaPrimary" href="login.html">Se connecter</a>
+            <a id="registerLink" class="ctaGhost" href="login.html?tab=register">Créer un compte</a>
           </div>
         </div>
       </section>
@@ -417,7 +418,7 @@
             <p>Vous êtes artiste ? Rejoignez le distributeur Morgann Music CP pour publier vos sorties, gérer votre présence et gagner en visibilité.</p>
             <div class="landingCtas">
               <a class="ctaPrimary" href="/MMCP/distribution.html">Rejoindre le distributeur</a>
-              <a class="ctaGhost" href="/MMCP%20Play/dashboard.html">Accès artiste</a>
+              <a class="ctaGhost" href="dashboard.html">Accès artiste</a>
             </div>
           </article>
           <aside class="rail">
@@ -497,9 +498,9 @@
       </nav>
 
       <div class="sideBottom">
-        <a class="pillLink" href="/MMCP%20Play/dashboard.html">Poster votre musique</a>
-        <a id="adminLink" class="pillLink" href="/MMCP%20Play/admin.html" style="display:none;">Admin Play</a>
-        <a class="accountCard" href="/MMCP%20Play/profile.html">
+        <a class="pillLink" href="dashboard.html">Poster votre musique</a>
+        <a id="adminLink" class="pillLink" href="admin.html" style="display:none;">Admin Play</a>
+        <a class="accountCard" href="profile.html">
           <img id="sideAvatar" class="avatar" src="/default-avatar.png" alt="avatar" />
           <div style="min-width:0;">
             <div id="sideName" class="accountName">Compte</div>
@@ -787,8 +788,88 @@
     };
 
     let persistTimer = null;
+    let playbackPersistTimer = null;
+    let playbackSnapshot = null;
+    const PLAYBACK_KEY = "mmcp_playback_v1";
 
     function clean(v){ return String(v || "").trim(); }
+
+    function readPlaybackState(){
+      try {
+        const raw = localStorage.getItem(PLAYBACK_KEY);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        return parsed && typeof parsed === "object" ? parsed : null;
+      } catch {
+        return null;
+      }
+    }
+
+    function writePlaybackState(patch = {}){
+      const currentTrack = queue[currentIndex] || null;
+      const next = {
+        audioUrl: clean(audioEl.currentSrc || audioEl.src || currentTrack?.audioUrl || playbackSnapshot?.audioUrl || ""),
+        currentTime: Number.isFinite(audioEl.currentTime) ? audioEl.currentTime : Number(playbackSnapshot?.currentTime || 0),
+        isPlaying: !audioEl.paused,
+        trackId: currentTrack?.id || playbackSnapshot?.trackId || null,
+        title: clean(currentTrack?.title || playbackSnapshot?.title || ""),
+        artistName: clean(currentTrack?.artistName || playbackSnapshot?.artistName || ""),
+        releaseTitle: clean(currentTrack?.releaseTitle || playbackSnapshot?.releaseTitle || ""),
+        savedAt: Date.now(),
+        ...patch
+      };
+
+      playbackSnapshot = next;
+      try { localStorage.setItem(PLAYBACK_KEY, JSON.stringify(next)); } catch {}
+      return next;
+    }
+
+    function schedulePlaybackPersist(){
+      if (playbackPersistTimer) return;
+      playbackPersistTimer = setTimeout(() => {
+        playbackPersistTimer = null;
+        writePlaybackState();
+      }, 300);
+    }
+
+    async function restorePlaybackState(){
+      const state = readPlaybackState();
+      if (!state?.audioUrl) return;
+
+      const byId = state.trackId ? queue.findIndex((t) => t.id === state.trackId) : -1;
+      const byUrl = queue.findIndex((t) => clean(t.audioUrl) === clean(state.audioUrl));
+      const restoredIndex = byId >= 0 ? byId : byUrl;
+
+      if (restoredIndex >= 0) {
+        currentIndex = restoredIndex;
+        const restoredTrack = queue[restoredIndex];
+        playbackSnapshot = {
+          ...state,
+          title: clean(restoredTrack?.title || state.title || ""),
+          artistName: clean(restoredTrack?.artistName || state.artistName || ""),
+          releaseTitle: clean(restoredTrack?.releaseTitle || state.releaseTitle || "")
+        };
+        audioEl.src = restoredTrack.audioUrl;
+      } else {
+        playbackSnapshot = state;
+        audioEl.src = state.audioUrl;
+      }
+
+      const seekTo = Number(playbackSnapshot?.currentTime || 0);
+      if (Number.isFinite(seekTo) && seekTo > 0) {
+        audioEl.addEventListener("loadedmetadata", () => {
+          try {
+            audioEl.currentTime = seekTo;
+          } catch {}
+        }, { once: true });
+      }
+
+      if (playbackSnapshot?.isPlaying) {
+        try { await audioEl.play(); } catch {}
+      }
+
+      setNow();
+    }
 
     function formatCount(n){
       const value = Number.isFinite(Number(n)) ? Number(n) : 0;
@@ -1129,7 +1210,7 @@
       const artistName = releaseArtistName(release);
       const followed = playData.followedArtistIds.includes(artistId);
       const saved = playData.savedReleaseIds.includes(release.id);
-      const link = `/MMCP%20Play/artiste.html?artistId=${encodeURIComponent(artistId)}&name=${encodeURIComponent(artistName)}`;
+      const link = `artiste.html?artistId=${encodeURIComponent(artistId)}&name=${encodeURIComponent(artistName)}`;
 
       return `
         <article class="item" data-release="${release.id}">
@@ -1203,7 +1284,7 @@
       root.querySelectorAll("[data-public-playlist]").forEach((el) => {
         el.addEventListener("click", () => {
           const id = el.getAttribute("data-public-playlist");
-          window.location.href = `/MMCP%20Play/playlist.html?id=${encodeURIComponent(id)}`;
+          window.location.href = `playlist.html?id=${encodeURIComponent(id)}`;
         });
       });
     }
@@ -1245,7 +1326,7 @@
 
       followArtists.innerHTML = artists.map((a) => `
         <article class="item">
-          <a href="/MMCP%20Play/artiste.html?artistId=${encodeURIComponent(a.id)}&name=${encodeURIComponent(a.name)}"><img class="media" src="${a.cover || ""}" alt="${a.name}" /></a>
+          <a href="artiste.html?artistId=${encodeURIComponent(a.id)}&name=${encodeURIComponent(a.name)}"><img class="media" src="${a.cover || ""}" alt="${a.name}" /></a>
           <div class="body">
             <div class="name">${a.name}</div>
             <div class="meta">${a.count} sortie${a.count > 1 ? "s" : ""}</div>
@@ -1332,8 +1413,15 @@
     function setNow(){
       const t = queue[currentIndex];
       if (!t) {
-        nowTitle.textContent = "Aucune lecture";
-        nowMeta.textContent = "Choisis une piste.";
+        if (playbackSnapshot?.title) {
+          nowTitle.textContent = playbackSnapshot.title;
+          const by = clean(playbackSnapshot.artistName);
+          const rel = clean(playbackSnapshot.releaseTitle);
+          nowMeta.textContent = [by, rel].filter(Boolean).join(" • ") || "Lecture en cours";
+        } else {
+          nowTitle.textContent = "Aucune lecture";
+          nowMeta.textContent = "Choisis une piste.";
+        }
       } else {
         nowTitle.textContent = t.title;
         nowMeta.textContent = `${t.artistName} • ${t.releaseTitle}`;
@@ -1358,11 +1446,13 @@
     async function playAt(index){
       if (index < 0 || index >= queue.length) return;
       currentIndex = index;
+      playbackSnapshot = null;
       const t = queue[currentIndex];
       audioEl.src = t.audioUrl;
       try { await audioEl.play(); } catch {}
       setNow();
       pushHistory(t);
+      writePlaybackState();
     }
 
     function playNext(){ if (queue.length) playAt((currentIndex + 1) % queue.length); }
@@ -1428,21 +1518,31 @@
         if (audioEl.paused) { try { await audioEl.play(); } catch {} }
         else audioEl.pause();
         setNow();
+        writePlaybackState();
       });
       prevBtn.addEventListener("click", playPrev);
       nextBtn.addEventListener("click", playNext);
       audioEl.addEventListener("ended", playNext);
+      audioEl.addEventListener("play", () => { setNow(); writePlaybackState(); });
+      audioEl.addEventListener("pause", () => { setNow(); writePlaybackState(); });
       audioEl.addEventListener("timeupdate", () => {
         const cur = audioEl.currentTime || 0;
         const dur = audioEl.duration || 0;
         curEl.textContent = formatTime(cur);
         durEl.textContent = formatTime(dur);
         progressEl.value = dur > 0 ? Math.round((cur / dur) * 100) : 0;
+        schedulePlaybackPersist();
       });
       progressEl.addEventListener("input", () => {
         const dur = audioEl.duration || 0;
         if (!dur) return;
         audioEl.currentTime = (Number(progressEl.value) / 100) * dur;
+        schedulePlaybackPersist();
+      });
+
+      window.addEventListener("pagehide", () => writePlaybackState());
+      document.addEventListener("visibilitychange", () => {
+        if (document.hidden) writePlaybackState();
       });
     }
 
@@ -1457,8 +1557,8 @@
     onAuthStateChanged(auth, async (user) => {
       currentUser = user || null;
       const redirect = encodeURIComponent(window.location.href);
-      $("loginLink").href = `/MMCP%20Play/login.html?redirect=${redirect}`;
-      $("registerLink").href = `/MMCP%20Play/login.html?tab=register&redirect=${redirect}`;
+      $("loginLink").href = `login.html?redirect=${redirect}`;
+      $("registerLink").href = `login.html?tab=register&redirect=${redirect}`;
       loadLandingArtists();
       loadLandingReleases();
       loadLandingPlaylists();
@@ -1493,6 +1593,7 @@
       releases = await loadReleases();
       publicPlaylists = await loadPublicPlaylists();
       queue = buildQueue(releases);
+      await restorePlaybackState();
       setNow();
       renderAll();
     });

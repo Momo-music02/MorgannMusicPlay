@@ -39,7 +39,7 @@
         <h1 class="title" id="title">Playlist</h1>
         <p class="sub" id="subline">Chargement…</p>
       </div>
-      <a class="btn" href="/MMCP%20Play/index.html">← Retour Play</a>
+      <a class="btn" href="index.html">← Retour Play</a>
     </div>
 
     <section class="card hero">
@@ -213,7 +213,7 @@
 
     onAuthStateChanged(auth, async (user) => {
       if (!user) {
-        window.location.href = `/login.html?redirect=${encodeURIComponent(window.location.href)}`;
+        window.location.href = `login.html?redirect=${encodeURIComponent(window.location.href)}`;
         return;
       }
 
@@ -242,5 +242,6 @@
       }
     });
   </script>
+  <script src="playback-persist.js"></script>
 </body>
 </html>

@@ -40,13 +40,13 @@
         <h1 class="title">Admin Play</h1>
         <p class="sub" id="subline">Gestion sorties + playlists publiques.</p>
       </div>
-      <a class="btn" href="/MMCP%20Play/index.html">← Retour Play</a>
+      <a class="btn" href="index.html">← Retour Play</a>
     </div>
 
     <section id="gate" class="card">
       <div class="sectionTitle">Accès admin</div>
       <p class="msg" style="margin-bottom:10px;">Connecte-toi avec un compte admin.</p>
-      <a id="loginLink" class="btn" href="/login.html">Se connecter</a>
+      <a id="loginLink" class="btn" href="login.html">Se connecter</a>
     </section>
 
     <div id="app" style="display:none; display:grid; gap:12px;">
@@ -583,7 +583,7 @@
 
     onAuthStateChanged(auth, async (user) => {
       const redirect = encodeURIComponent(window.location.href);
-      $("loginLink").href = `/login.html?redirect=${redirect}`;
+      $("loginLink").href = `login.html?redirect=${redirect}`;
 
       if (!user) {
         gate.style.display = "block";
@@ -613,5 +613,6 @@
       fillAddReleaseSelect();
     });
   </script>
+  <script src="playback-persist.js"></script>
 </body>
 </html>

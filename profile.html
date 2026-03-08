@@ -38,7 +38,7 @@
         <p class="sub" id="subline">Connexion requise.</p>
       </div>
       <div class="links">
-        <a class="btn" href="/MMCP%20Play/index.html">← Retour Play</a>
+        <a class="btn" href="index.html">← Retour Play</a>
       </div>
     </div>
 
@@ -46,8 +46,8 @@
       <div class="sectionTitle">Compte Morgann Music CP</div>
       <p class="muted" style="margin-bottom:10px;">Connecte-toi ou crée un compte pour accéder à ton profil Play.</p>
       <div class="links">
-        <a id="loginLink" class="btn" href="/login.html">Se connecter</a>
-        <a id="registerLink" class="btn" href="/login.html?tab=register">Créer un compte</a>
+        <a id="loginLink" class="btn" href="login.html">Se connecter</a>
+        <a id="registerLink" class="btn" href="login.html?tab=register">Créer un compte</a>
       </div>
     </section>
 
@@ -60,7 +60,7 @@
         </div>
       </div>
       <div class="links" style="margin-top:10px;">
-        <a class="btn" href="/account.html">Voir mon compte</a>
+        <a class="btn" href="profile.html">Voir mon compte</a>
         <button id="logoutBtn" class="btn" type="button">Déconnexion</button>
       </div>
     </section>
@@ -76,7 +76,7 @@
         <article class="choice">
           <h3>Publier gratuitement sur Play</h3>
           <p class="muted" style="margin-bottom:8px;">Tu choisis ton nom d’artiste et tu publies sur la plateforme Play.</p>
-          <a class="btn" href="/MMCP%20Play/dashboard.html">Aller au dashboard artiste</a>
+          <a class="btn" href="dashboard.html">Aller au dashboard artiste</a>
         </article>
       </div>
     </section>
@@ -112,13 +112,13 @@
 
     logoutBtn.addEventListener("click", async () => {
       await signOut(auth);
-      window.location.href = "/MMCP%20Play/profile.html";
+      window.location.href = "profile.html";
     });
 
     onAuthStateChanged(auth, (user) => {
       const redirect = encodeURIComponent(window.location.href);
-      $("loginLink").href = `/login.html?redirect=${redirect}`;
-      $("registerLink").href = `/login.html?tab=register&redirect=${redirect}`;
+      $("loginLink").href = `login.html?redirect=${redirect}`;
+      $("registerLink").href = `login.html?tab=register&redirect=${redirect}`;
 
       if (!user) {
         authCard.style.display = "block";
@@ -138,5 +138,6 @@
       emailLine.textContent = user.email || "";
     });
   </script>
+  <script src="playback-persist.js"></script>
 </body>
 </html>

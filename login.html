@@ -112,7 +112,7 @@
       <div class="badge">Morgann Music Play</div>
       <h1>Connexion / Inscription</h1>
       <p>Accédez à la plateforme pour écouter, découvrir les artistes du label et gérer votre espace.</p>
-      <p><a href="/MMCP%20Play/index.html">← Retour à l'accueil</a></p>
+      <p><a href="index.html">← Retour à l'accueil</a></p>
     </section>
 
     <section class="forms">
@@ -201,7 +201,7 @@
     const db = getFirestore(app);
 
     const params = new URLSearchParams(window.location.search);
-    const redirectTarget = params.get("redirect") || "/MMCP%20Play/index.html";
+    const redirectTarget = params.get("redirect") || "index.html";
 
     const tabLogin = document.getElementById("tabLogin");
     const tabRegister = document.getElementById("tabRegister");
@@ -329,5 +329,6 @@
       }
     });
   </script>
+  <script src="playback-persist.js"></script>
 </body>
 </html>

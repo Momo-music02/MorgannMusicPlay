@@ -5,32 +5,29 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Play — Dashboard Artiste</title>
   <style>
-    :root { --bg:#e2e2e2; --txt:#000; --bg2:#fff; --cover:#bfbfbf; --stroke:rgba(0,0,0,.12); --muted:rgba(0,0,0,.6); }
-    @media (prefers-color-scheme: dark){ :root{ --bg:#414141; --txt:#fff; --bg2:#1e1e1e; --cover:#575757; --stroke:rgba(255,255,255,.14); --muted:rgba(255,255,255,.65);} }
+    :root{ --bg:#fff9f2; --surface:#fffefb; --surface2:#fff4df; --txt:#2e2231; --muted:#7d687f; --stroke:rgba(164,98,136,.24); --cover:#f2d4ab; --accent:#ff4fa0; }
     *{ box-sizing:border-box; margin:0; padding:0; }
-    body{ font-family:Helvetica,Arial,sans-serif; background:var(--bg); color:var(--txt); }
+    body{ font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",Helvetica,Arial,sans-serif; background:var(--bg); color:var(--txt); }
     .wrap{ max-width:1200px; margin:0 auto; padding:22px; display:grid; gap:12px; }
     .top{ display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; }
     .title{ font-size:30px; font-weight:900; }
     .sub{ color:var(--muted); margin-top:4px; }
     .links{ display:flex; gap:8px; flex-wrap:wrap; }
-    .btn{ display:inline-flex; align-items:center; justify-content:center; gap:6px; text-decoration:none; border-radius:999px; border:1px solid var(--stroke); color:var(--txt); padding:9px 14px; font-weight:700; background:rgba(0,0,0,.04); cursor:pointer; }
-    @media (prefers-color-scheme: dark){ .btn{ background:rgba(255,255,255,.06); } }
-    .card{ background:rgba(255,255,255,.62); border:1px solid var(--stroke); border-radius:20px; padding:14px; -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px); }
-    @media (prefers-color-scheme: dark){ .card{ background:rgba(30,30,30,.62); } }
+    .btn{ display:inline-flex; align-items:center; justify-content:center; gap:6px; text-decoration:none; border-radius:999px; border:1px solid var(--stroke); color:var(--txt); padding:9px 14px; font-weight:800; background:var(--surface); cursor:pointer; }
+    .btn:hover{ background:rgba(255,79,160,.1); }
+    .card{ background:var(--surface); border:1px solid var(--stroke); border-radius:16px; padding:14px; }
     .sectionTitle{ font-size:14px; color:var(--muted); font-weight:800; margin-bottom:10px; }
     .profile{ display:grid; grid-template-columns:140px 1fr; gap:12px; }
     .avatar{ width:120px; height:120px; border-radius:50%; object-fit:cover; border:1px solid var(--stroke); background:var(--cover); }
     .banner{ width:100%; height:180px; object-fit:cover; border:1px solid var(--stroke); border-radius:16px; background:var(--cover); margin-bottom:10px; }
-    .input{ width:100%; border:1px solid var(--stroke); border-radius:10px; padding:10px; background:transparent; color:var(--txt); }
+    .input{ width:100%; border:1px solid var(--stroke); border-radius:10px; padding:10px; background:var(--surface2); color:var(--txt); }
     .row{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
     .muted{ color:var(--muted); font-size:12px; }
     .stats{ display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:10px; }
-    .stat{ border:1px solid var(--stroke); border-radius:14px; padding:10px; background:rgba(0,0,0,.03); }
-    @media (prefers-color-scheme: dark){ .stat{ background:rgba(255,255,255,.05);} }
+    .stat{ border:1px solid var(--stroke); border-radius:14px; padding:10px; background:var(--surface2); }
     .k{ font-size:12px; color:var(--muted); }
     .v{ font-size:24px; font-weight:900; margin-top:2px; }
-    .release{ border:1px solid var(--stroke); border-radius:14px; padding:10px; margin-bottom:8px; }
+    .release{ border:1px solid var(--stroke); border-radius:14px; padding:10px; margin-bottom:8px; background:var(--surface2); }
     .releaseTop{ display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; }
     .releaseName{ font-size:15px; font-weight:900; }
     .tag{ border:1px solid var(--stroke); border-radius:999px; padding:3px 9px; font-size:11px; }
@@ -48,9 +45,9 @@
         <p class="sub" id="subline">Connecte-toi pour gérer ton artiste.</p>
       </div>
       <div class="links">
-        <a class="btn" href="/MMCP%20Play/profile.html">Mon profil</a>
-        <a class="btn" href="/MMCP%20Play/upload.html">Poster</a>
-        <a class="btn" href="/MMCP%20Play/index.html">← Play</a>
+        <a class="btn" href="profile.html">Mon profil</a>
+        <a class="btn" href="upload.html">Poster</a>
+        <a class="btn" href="index.html">← Play</a>
       </div>
     </div>
 
@@ -58,8 +55,8 @@
       <div class="sectionTitle">Connexion requise</div>
       <p class="muted" style="margin-bottom:10px;">Connecte-toi avec ton compte Morgann Music CP pour ouvrir le dashboard artiste.</p>
       <div class="links">
-        <a id="loginLink" class="btn" href="/login.html">Se connecter</a>
-        <a id="registerLink" class="btn" href="/login.html?tab=register">Créer un compte</a>
+        <a id="loginLink" class="btn" href="login.html">Se connecter</a>
+        <a id="registerLink" class="btn" href="login.html?tab=register">Créer un compte</a>
       </div>
     </section>
 
@@ -282,7 +279,7 @@
         const tracks = Array.isArray(r?.tracks) ? r.tracks : [];
         const artistId = clean(r?.artistId || r?.mainArtistId);
         const artistName = clean(r?.artistName || currentArtist?.name || "Artiste");
-        const artistLink = `/MMCP%20Play/artiste.html?artistId=${encodeURIComponent(artistId)}&name=${encodeURIComponent(artistName)}`;
+        const artistLink = `artiste.html?artistId=${encodeURIComponent(artistId)}&name=${encodeURIComponent(artistName)}`;
         return `
           <article class="release">
             <div class="releaseTop">
@@ -375,8 +372,8 @@
 
     onAuthStateChanged(auth, async (user) => {
       const redirect = encodeURIComponent(window.location.href);
-      $("loginLink").href = `/login.html?redirect=${redirect}`;
-      $("registerLink").href = `/login.html?tab=register&redirect=${redirect}`;
+      $("loginLink").href = `login.html?redirect=${redirect}`;
+      $("registerLink").href = `login.html?tab=register&redirect=${redirect}`;
 
       currentUser = user || null;
       if (!currentUser) {
@@ -398,5 +395,6 @@
       renderReleases();
     });
   </script>
+  <script src="playback-persist.js"></script>
 </body>
 </html>
