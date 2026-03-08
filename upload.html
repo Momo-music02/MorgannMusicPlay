@@ -414,7 +414,7 @@
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-auth.js";
-import { getFirestore, collection, addDoc, getDocs, query, where, serverTimestamp, doc, getDoc }
+import { getFirestore, collection, addDoc, getDocs, query, where, serverTimestamp, doc, getDoc, setDoc }
   from "https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js";
 import { getStorage, ref, uploadBytes, getDownloadURL }
   from "https://www.gstatic.com/firebasejs/12.9.0/firebase-storage.js";
@@ -1282,6 +1282,13 @@ async function createRelease(){
     };
 
     dbg("✍️ Écriture Firestore…");
+    await withTimeout(setDoc(doc(db, "releases", uid), {
+      ownerUid: uid,
+      ownerEmail: clean(auth.currentUser?.email || "") || null,
+      updatedAt: serverTimestamp(),
+      createdAt: serverTimestamp()
+    }, { merge: true }), 12000, "initialisation releases/{uid}");
+
     await withTimeout(addDoc(collection(db, "releases", uid, "items"), payload), 20000, "écriture release");
 
     toastAndRedirect("Votre sortie est en cours de vérification par Morgann Music CP.", "index.html");
