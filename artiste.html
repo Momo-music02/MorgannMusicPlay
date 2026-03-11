@@ -92,9 +92,27 @@
     const artistPhotoInput = $("artistPhotoInput");
     const managerMsg = $("managerMsg");
 
+    // Gestion du slug dans l'URL (compatibilité UID et nom)
+    function getSlugFromUrl() {
+      // Si artiste.html?slug=... (via .htaccess ou redirection)
+      const params = new URLSearchParams(window.location.search);
+      if (params.has("slug")) return params.get("slug");
+      // Si accès direct via /NomArtiste (sans paramètre)
+      // On vérifie si le pathname est du type /artiste.html ou /NomArtiste
+      const path = window.location.pathname;
+      if (path.endsWith("/artiste.html")) return null;
+      // Récupère le dernier segment de l'URL (ex: /MorgannMusic)
+      const segments = path.split("/").filter(Boolean);
+      if (segments.length === 1 && segments[0] !== "artiste.html") {
+        return segments[0];
+      }
+      return null;
+    }
+
     const params = new URLSearchParams(window.location.search);
-    const targetArtistId = String(params.get("artistId") || "").trim();
+    const targetArtistId = String(params.get("artistId") || params.get("uid") || "").trim();
     const targetName = String(params.get("name") || "").trim();
+    const targetSlug = getSlugFromUrl();
     let canManageArtist = false;
     let currentUser = null;
 
@@ -254,21 +272,41 @@
 
     onAuthStateChanged(auth, async (user) => {
       currentUser = user || null;
+      let artistOwnerUid = "";
+      let artistIdToUse = targetArtistId;
+      let artistNameToUse = targetName;
 
-      artistTitle.textContent = targetName || "Artiste";
-
-      try {
-        if (!targetArtistId && !targetName) {
-          render([]);
-          countLine.textContent = "Artiste introuvable";
-          manageCard.style.display = "none";
-          return;
+      // Si on a un slug, on cherche l'artiste correspondant
+      if (!artistIdToUse && targetSlug) {
+        try {
+          // On suppose que le champ "slug" existe dans la collection "artists"
+          const q = query(collection(db, "artists"), where("slug", "==", targetSlug), limit(1));
+          const snap = await getDocs(q);
+          if (!snap.empty) {
+            const docSnap = snap.docs[0];
+            artistIdToUse = docSnap.id;
+            const a = docSnap.data() || {};
+            artistNameToUse = clean(a.name);
+            artistOwnerUid = clean(a.ownerUid);
+            if (clean(a.name)) artistTitle.textContent = clean(a.name);
+            const bannerUrl = clean(a.playBannerImageUrl);
+            if (bannerUrl) {
+              artistBanner.src = bannerUrl;
+              artistBanner.style.display = "block";
+            } else {
+              artistBanner.style.display = "none";
+            }
+          }
+        } catch (e) {
+          // slug non trouvé
         }
+      }
 
-        let artistOwnerUid = "";
-        if (targetArtistId) {
-          try {
-            const artistSnap = await getDoc(doc(db, "artists", targetArtistId));
+      // Si on a un artistId (par paramètre ou trouvé via slug)
+      if (artistIdToUse) {
+        try {
+          if (!artistOwnerUid) {
+            const artistSnap = await getDoc(doc(db, "artists", artistIdToUse));
             if (artistSnap.exists()) {
               const a = artistSnap.data() || {};
               artistOwnerUid = clean(a.ownerUid);
@@ -281,47 +319,50 @@
                 artistBanner.style.display = "none";
               }
             }
-          } catch {}
-        }
-
-        canManageArtist = !!currentUser && !!artistOwnerUid && currentUser.uid === artistOwnerUid;
-        manageCard.style.display = canManageArtist ? "block" : "none";
-
-        const releases = await loadReleasesByArtist(targetArtistId, targetName);
-        const list = releases.filter(r => (
-          (!targetArtistId || clean(r.artistId || r.mainArtistId) === targetArtistId) ||
-          (targetName && clean(r.artistName) === targetName)
-        ));
-        render(list);
-        countLine.textContent = `${list.length} sortie${list.length > 1 ? "s" : ""} éligible${list.length > 1 ? "s" : ""}`;
-
-        saveArtistPhotoBtn?.addEventListener("click", async () => {
-          if (!canManageArtist) return;
-          const file = artistPhotoInput?.files?.[0];
-          if (!file) {
-            managerMsg.textContent = "Sélectionne une image avant d'enregistrer.";
-            return;
           }
-          saveArtistPhotoBtn.disabled = true;
-          managerMsg.textContent = "Upload en cours…";
-          try {
-            const url = await uploadArtistPhoto(targetArtistId, file);
-            await updateDoc(doc(db, "artists", targetArtistId), {
-              playProfileImageUrl: url,
-              updatedAt: serverTimestamp()
-            });
-            managerMsg.textContent = "Photo Play enregistrée."
-          } catch (err) {
-            managerMsg.textContent = "Erreur: " + (err?.message || String(err));
-          } finally {
-            saveArtistPhotoBtn.disabled = false;
-          }
-        });
-      } catch (e) {
-        console.error(e);
-        render([]);
-        countLine.textContent = "Erreur de chargement";
+        } catch {}
       }
+
+      // Affichage gestion si propriétaire
+      canManageArtist = !!currentUser && !!artistOwnerUid && currentUser.uid === artistOwnerUid;
+      manageCard.style.display = canManageArtist ? "block" : "none";
+
+      // Chargement des releases
+      if (!artistIdToUse && !artistNameToUse) {
+        render([]);
+        countLine.textContent = "Artiste introuvable";
+        return;
+      }
+      const releases = await loadReleasesByArtist(artistIdToUse, artistNameToUse);
+      const list = releases.filter(r => (
+        (!artistIdToUse || clean(r.artistId || r.mainArtistId) === artistIdToUse) ||
+        (artistNameToUse && clean(r.artistName) === artistNameToUse)
+      ));
+      render(list);
+      countLine.textContent = `${list.length} sortie${list.length > 1 ? "s" : ""} éligible${list.length > 1 ? "s" : ""}`;
+
+      saveArtistPhotoBtn?.addEventListener("click", async () => {
+        if (!canManageArtist) return;
+        const file = artistPhotoInput?.files?.[0];
+        if (!file) {
+          managerMsg.textContent = "Sélectionne une image avant d'enregistrer.";
+          return;
+        }
+        saveArtistPhotoBtn.disabled = true;
+        managerMsg.textContent = "Upload en cours…";
+        try {
+          const url = await uploadArtistPhoto(artistIdToUse, file);
+          await updateDoc(doc(db, "artists", artistIdToUse), {
+            playProfileImageUrl: url,
+            updatedAt: serverTimestamp()
+          });
+          managerMsg.textContent = "Photo Play enregistrée."
+        } catch (err) {
+          managerMsg.textContent = "Erreur: " + (err?.message || String(err));
+        } finally {
+          saveArtistPhotoBtn.disabled = false;
+        }
+      });
     });
   </script>
   <script src="playback-persist.js"></script>
